@@ -1,0 +1,20 @@
+name = "NodeKayles"
+defaultTargets = ["NodeKayles", "Queens"]
+
+# mathlib (Finset, Equiv, card lemmas; Nat.find/Nat.xor for the self-contained Grundy layer).
+# Note: mathlib v4.32 no longer ships SetTheory/Game/ (PGame and the Sprague-Grundy theory were
+# extracted to the standalone CombinatorialGames package), so the Grundy layer here is
+# self-contained rather than anchored to a library `Impartial`/`grundyValue`.
+# Pinned to the exact revision matching lean-toolchain v4.32.0-rc1 (also in lake-manifest.json) so
+# the build is reproducible. Do not run `lake update` on a checkout: it re-floats to master and
+# breaks the toolchain pin.
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4"
+rev = "571b8a8e54219b4d393f75f4b8653fac08197fcc"
+
+[[lean_lib]]
+name = "NodeKayles"
+
+[[lean_lib]]
+name = "Queens"

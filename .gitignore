@@ -1,0 +1,5 @@
+/target
+/verification/lean/.lake
+*.zst
+*.dump
+perf.data*

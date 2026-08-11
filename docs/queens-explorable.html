@@ -1,0 +1,1823 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Queens Game — play it, then see inside the solver</title>
+<style>
+  :root {
+    --bg: #0f1419;
+    --bg-elev: #1a212b;
+    --bg-card: #18202a;
+    --fg: #e6edf3;
+    --fg-dim: #9fb0c0;
+    --fg-faint: #6b7d8f;
+    --accent: #4cc2ff;
+    --accent2: #ffb454;
+    --accent3: #7ee787;
+    --accent4: #ff7b9c;
+    --border: #2a3542;
+    --grid: #232c38;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .topbar {
+    position: sticky; top: 0; z-index: 10; display: flex; align-items: center;
+    gap: 18px; padding: 10px 22px; background: rgba(15,20,25,0.92);
+    backdrop-filter: blur(6px); border-bottom: 1px solid var(--border);
+  }
+  .topbar .brand { font-weight: 700; letter-spacing: .3px; white-space: nowrap; }
+  .topbar .brand .accent { color: var(--accent); }
+  .topbar nav { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13.5px; }
+  .topbar nav a { color: var(--fg-dim); text-decoration: none; }
+  .topbar nav a:hover { color: var(--accent); }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 22px 80px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  header.hero { padding: 46px 0 8px; }
+  header.hero h1 { font-size: 34px; line-height: 1.2; margin: 0 0 10px; }
+  header.hero h1 .sub {
+    display: block; font-size: 19px; color: var(--accent);
+    font-weight: 500; margin-top: 8px;
+  }
+  .lede { color: var(--fg-dim); font-size: 17px; }
+  .win  { color: var(--accent3); font-weight: 600; }
+  .loss { color: var(--accent4); font-weight: 600; }
+  kbd, code {
+    font-family: var(--mono); font-size: .85em; background: var(--bg-elev);
+    border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px;
+  }
+  section.scene {
+    margin: 42px 0; padding: 26px 28px; background: var(--bg-card);
+    border: 1px solid var(--border); border-radius: 12px;
+  }
+  section.scene > h2 { margin: 0 0 4px; font-size: 23px; }
+  section.scene > h2 .num { color: var(--accent2); font-family: var(--mono); font-size: 17px; margin-right: 10px; }
+  section.scene .sceneintro { color: var(--fg-dim); margin: 6px 0 18px; }
+  section.scene .backlink { font-size: 13.5px; color: var(--fg-faint); }
+  .stage { margin-top: 10px; }
+  .stage-row { display: flex; flex-wrap: wrap; gap: 26px; align-items: flex-start; }
+  .boardbox { flex: 0 1 460px; min-width: 280px; }
+  .boardbox svg { width: 100%; height: auto; display: block; }
+  .sidebox { flex: 1 1 260px; min-width: 240px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+  .controls .lbl { font-size: 13px; color: var(--fg-faint); text-transform: uppercase; letter-spacing: .6px; margin-right: 2px; }
+  button.btn {
+    font: 600 14px/1 inherit; color: var(--fg-dim); background: var(--bg-elev);
+    border: 1px solid var(--border); border-radius: 7px; padding: 7px 12px;
+    cursor: pointer;
+  }
+  button.btn:hover { color: var(--fg); border-color: var(--accent); }
+  button.btn:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+  button.btn[aria-pressed="true"] { color: var(--bg); background: var(--accent); border-color: var(--accent); }
+  button.btn:disabled { opacity: .45; cursor: default; }
+  .statusline {
+    margin: 4px 0 10px; padding: 10px 14px; border-radius: 8px;
+    background: var(--bg-elev); border: 1px solid var(--border); font-size: 15px;
+  }
+  .oracle { font-size: 14px; color: var(--fg-dim); margin: 0 0 10px; }
+  .oracle .tag {
+    font-size: 11.5px; text-transform: uppercase; letter-spacing: .8px;
+    color: var(--accent2); font-weight: 700; margin-right: 8px;
+  }
+  .movelog {
+    font-family: var(--mono); font-size: 13px; color: var(--fg-dim);
+    background: var(--bg-elev); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 12px; min-height: 38px; max-height: 130px; overflow-y: auto;
+  }
+  .movelog .you { color: var(--accent); }
+  .movelog .cpu { color: var(--accent2); }
+  .statnote { font-size: 12.5px; color: var(--fg-faint); margin-top: 8px; }
+  .keyidea {
+    border-left: 4px solid var(--accent2); background: rgba(255,180,84,0.06);
+    border-radius: 0 8px 8px 0; padding: 12px 16px; margin: 18px 0 4px; font-size: 14.5px;
+  }
+  .keyidea .tag {
+    font-size: 12px; text-transform: uppercase; letter-spacing: .8px;
+    color: var(--accent2); font-weight: 700; margin-right: 8px;
+  }
+  .kpirow {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 10px; margin: 14px 0;
+  }
+  .tile {
+    background: var(--bg-elev); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .tile .tlabel { font-size: 12px; color: var(--fg-faint); letter-spacing: .3px; }
+  .tile .tvalue { font-size: 26px; font-weight: 600; margin: 2px 0 1px; }
+  .tile .tsub { font-size: 12px; color: var(--fg-dim); }
+  .chartcard {
+    background: var(--bg-elev); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px 8px; margin: 14px 0; position: relative;
+  }
+  .chartcard h3 { margin: 0 0 2px; font-size: 15.5px; }
+  .chartcard .chartsub { font-size: 12.5px; color: var(--fg-faint); margin: 0 0 8px; }
+  .chartcard svg { width: 100%; height: auto; display: block; }
+  .chartcard svg:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+  .legendrow { display: flex; flex-wrap: wrap; gap: 16px; font-size: 12.5px; color: var(--fg-dim); margin: 6px 0 2px; }
+  .legendrow .key { display: inline-flex; align-items: center; gap: 6px; }
+  .charttip {
+    position: absolute; pointer-events: none; display: none; z-index: 5;
+    background: rgba(15,20,25,0.96); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 11px; font-size: 12.5px; max-width: 300px;
+  }
+  .charttip .tt-n { color: var(--fg-faint); margin-bottom: 3px; }
+  .charttip .tt-row { display: flex; align-items: baseline; gap: 7px; }
+  .charttip .tt-key { width: 12px; height: 0; border-top: 3px solid; flex: none; transform: translateY(-3px); }
+  .charttip .tt-val { font-weight: 600; }
+  .charttip .tt-lbl { color: var(--fg-dim); }
+  details.tableview { margin: 12px 0 4px; }
+  details.tableview summary { cursor: pointer; color: var(--accent); font-size: 14px; }
+  .tableview table { border-collapse: collapse; width: 100%; margin: 10px 0 4px; font-size: 13px; }
+  .tableview th, .tableview td {
+    text-align: right; padding: 5px 9px; border-bottom: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
+  }
+  .tableview th { color: var(--accent); font-weight: 600; }
+  .tableview th:first-child, .tableview td:first-child { text-align: left; }
+  .tableview td.dim { color: var(--fg-faint); }
+  .tableview tr.milestone td { color: var(--fg-dim); font-style: italic; }
+  .planned { opacity: .62; }
+  .planned .soon {
+    font-size: 11.5px; text-transform: uppercase; letter-spacing: .8px;
+    color: var(--accent4); font-weight: 700; border: 1px solid var(--accent4);
+    border-radius: 5px; padding: 2px 7px; margin-left: 10px; vertical-align: 3px;
+  }
+  .planned ul { color: var(--fg-dim); font-size: 14.5px; }
+  footer.pagefoot { margin-top: 50px; color: var(--fg-faint); font-size: 13.5px; border-top: 1px solid var(--border); padding-top: 18px; }
+  .no-js .stage::before {
+    content: "This page is interactive and needs JavaScript (it runs entirely in this file — nothing is fetched).";
+    display: block; color: var(--accent4); font-size: 14px; padding: 12px 0;
+  }
+  .no-js .stage > * { display: none; }
+</style>
+</head>
+<body>
+<script>document.documentElement.classList.remove('no-js');</script>
+
+<div class="topbar">
+  <span class="brand">Non-Attacking <span class="accent">Queens</span> · interactive</span>
+  <nav>
+    <a href="#play">Play</a>
+    <a href="#mirror">Odd boards</a>
+    <a href="#growth">Growth</a>
+    <a href="#tactics">Tactics</a>
+    <a href="#coming">More scenes</a>
+    <a href="queens-report-intro-edit.html">the report</a>
+    <a href="queens-n18-paper.md">the paper</a>
+  </nav>
+</div>
+
+<div class="wrap">
+
+<header class="hero">
+  <h1>The Queens Game
+    <span class="sub">play it, then see inside the solver</span>
+  </h1>
+  <p class="lede">Two players take turns placing queens on an <i>n</i>×<i>n</i> board so that
+  no queen attacks another. If it is your turn and every remaining square is attacked,
+  you lose. Simple to state — but on a 16×16 board deciding the winner took a
+  ten-billion-node search, and on 18×18 the answer (<span class="win">the first player
+  wins</span>, opening at the centre) is a new result.</p>
+  <p class="lede">This page is the interactive companion to the
+  <a href="queens-report-intro-edit.html">narrative report</a> and the formal paper.
+  Everything here runs inside this single file: the boards below are driven by a real
+  solver — the same rules, symmetry folding, memoization, and move ordering as the Rust
+  engine, ported to JavaScript and cross-checked against its known values.</p>
+</header>
+
+<!-- ============================ Scene 1: play ======================== -->
+<section class="scene" id="play">
+  <h2><span class="num">1</span>Play the game</h2>
+  <p class="sceneintro">Pick a board size and place a queen — hover to preview which
+  squares it would attack. The computer plays <b>perfectly</b>: it has solved the whole
+  board, so the oracle under the board always knows who wins from the current position.
+  Can you beat it when the oracle says you should?</p>
+  <div class="stage" id="playStage">
+    <div class="controls" id="playSizes"><span class="lbl">Board</span></div>
+    <div class="controls">
+      <span class="lbl">First move</span>
+      <button class="btn" id="playYouFirst" aria-pressed="true">You start</button>
+      <button class="btn" id="playCpuFirst" aria-pressed="false">Computer starts</button>
+      <span style="flex:1"></span>
+      <button class="btn" id="playUndo">Undo</button>
+      <button class="btn" id="playReset">Reset</button>
+    </div>
+    <div class="stage-row">
+      <div class="boardbox"><svg id="playBoard" role="img" aria-label="playable queens board"></svg></div>
+      <div class="sidebox">
+        <div class="statusline" id="playStatus">—</div>
+        <p class="oracle"><span class="tag">Perfect-play oracle</span><span id="playOracle">—</span></p>
+        <div class="movelog" id="playLog"></div>
+        <p class="statnote" id="playStat"></p>
+      </div>
+    </div>
+  </div>
+  <div class="keyidea"><span class="tag">Key idea</span>The oracle is not a heuristic:
+  for these board sizes the in-page solver visits every position that matters (merging
+  the 8 mirror-images of each one) and memoizes the result — the same three ideas
+  (search, symmetry, transposition table) that carry the 18×18 solve, at toy scale.
+  <span class="backlink">Report <a href="queens-report-intro-edit.html#game">§1</a>,
+  <a href="queens-report-intro-edit.html#symmetry">§4</a>.</span></div>
+</section>
+
+<!-- ============================ Scene 2: mirror ====================== -->
+<section class="scene" id="mirror">
+  <h2><span class="num">2</span>Odd boards are free</h2>
+  <p class="sceneintro">On any odd board the first player wins with <b>zero search</b>:
+  take the centre, then answer every one of your moves with its 180° rotation. Try to
+  survive — the computer never has to think, and it always has a reply.</p>
+  <div class="stage" id="mirrorStage">
+    <div class="controls" id="mirrorSizes"><span class="lbl">Board</span></div>
+    <div class="controls">
+      <span style="flex:1"></span>
+      <button class="btn" id="mirrorReset">Reset</button>
+    </div>
+    <div class="stage-row">
+      <div class="boardbox"><svg id="mirrorBoard" role="img" aria-label="odd-board mirror demo"></svg></div>
+      <div class="sidebox">
+        <div class="statusline" id="mirrorStatus">—</div>
+        <p class="oracle"><span class="tag">The invariant</span><span id="mirrorInv">After
+        the centre move, the set of free squares is exactly 180°-symmetric — and it stays
+        that way after every mirrored reply.</span></p>
+        <div class="movelog" id="mirrorLog"></div>
+        <p class="statnote" id="mirrorStat"></p>
+      </div>
+    </div>
+  </div>
+  <div class="keyidea"><span class="tag">Why it works</span>A square attacks its own 180°
+  image only from the centre lines, and the centre is already taken — so whenever you find
+  a free square, its mirror is also free <i>after</i> your move. The computer can always
+  answer; you run out first. This pairing argument is why every odd <i>n</i> is a
+  first-player win, no computer needed — the hard, open cases are the even boards.
+  <span class="backlink">Report <a href="queens-report-intro-edit.html#impartial">§3</a>.</span></div>
+</section>
+
+<!-- ============================ Scene 3: growth ====================== -->
+<section class="scene" id="growth">
+  <h2><span class="num">3</span>How the search space grows</h2>
+  <p class="sceneintro">Why is this game hard? Measure it: the button below makes
+  the page's own solver re-solve every board from 1×1 to 10×10 twice — once with
+  no memory (<b>naive</b>, the ground-truth recursion) and once with the
+  transposition table + symmetry folding — while counting every position it
+  expands and every move it tries. The chart puts those live numbers next to the
+  real Rust solver's milestones up to the 18×18 proof.</p>
+  <div class="stage" id="growthStage">
+    <div class="controls">
+      <button class="btn" id="growthRun">Run the live measurement (~5–10 s)</button>
+      <span class="statnote" id="growthProgress" style="margin-top:0"></span>
+    </div>
+    <div class="kpirow" id="growthTiles"></div>
+    <div class="chartcard" id="growthCard">
+      <h3>Positions searched vs board size</h3>
+      <p class="chartsub">log scale — every second gridline is ×100. Diamond
+      milestones come from the Rust solver; hover any board size for exact values.</p>
+      <div class="legendrow" id="growthLegend"></div>
+      <div id="growthChart"></div>
+      <div class="charttip" id="growthTip"></div>
+    </div>
+    <details class="tableview" id="growthTable">
+      <summary>Table view — every measured value</summary>
+    </details>
+  </div>
+  <div class="keyidea" id="growthIdea"><span class="tag">The scaling law</span>
+  There is no fixed base: each two extra rows multiply the searched positions by a
+  <em>growing</em> factor — run the measurement to see the sequence. Odd boards stay
+  cheap (the centre-and-mirror win of scene 2 shows up as a sawtooth); even boards
+  must refute <em>every</em> first move, and that is where the ten-billion-node
+  searches come from. Memoization + symmetry is what keeps the curve on this chart
+  at all. <span class="backlink">Report
+  <a href="queens-report-intro-edit.html#hard">§2</a>,
+  <a href="queens-report-intro-edit.html#lineage">§7</a>.</span></div>
+</section>
+
+<!-- ============================ Scene 4: tactics ===================== -->
+<section class="scene" id="tactics">
+  <h2><span class="num">4</span>Where the speed comes from</h2>
+  <p class="sceneintro">Which idea earns its keep? The ladder below switches the
+  solver's tactics on one at a time — same engine, same board — and counts the
+  positions each configuration expands. Every number was produced by this page's
+  own solver (pre-computed; the test harness re-derives them). Below it: the
+  <em>production</em> Rust solver's full tactic stack at 16×16, from the first
+  56-minute solve to the current 13.4-second record.</p>
+  <div class="stage" id="tacticsStage">
+    <div class="controls" id="tacticsSizes"><span class="lbl">Board</span></div>
+    <div class="chartcard" id="ladderCard">
+      <h3>Switch the ideas on, one at a time</h3>
+      <p class="chartsub">positions expanded, log scale — each rung adds one tactic
+      on top of the rung above; ×N is that tactic's contribution at this board size.
+      The gray dot removes the α–β cutoff from the full stack instead.</p>
+      <div id="ladderChart"></div>
+      <div class="charttip" id="ladderTip"></div>
+    </div>
+    <div class="chartcard" id="lineageCard">
+      <h3>The real stack: 16×16 wall-clock, tactic by tactic</h3>
+      <p class="chartsub">log scale — each dot is a landed tactic (hover for what it
+      does). Same verdict every time; the work to prove it shrank ×250.</p>
+      <div id="lineageChart"></div>
+      <div class="charttip" id="lineageTip"></div>
+    </div>
+    <details class="tableview" id="tacticsTable">
+      <summary>Table view — the n=16 tactic stack</summary>
+    </details>
+  </div>
+  <div class="keyidea"><span class="tag">Key idea</span>No single trick solves the
+  game — the record is a <em>product</em> of factors: ordering × memoization ×
+  symmetry in this page's toy ladder, and table-driven endgames × dynamic ordering
+  × killer replies × cache-level engineering in the real solver. Each factor looks
+  modest; multiplied they turn 56 minutes into 13 seconds — and the same
+  machinery, plus a 17 GB table, carried the 18×18 proof.
+  <span class="backlink">Report
+  <a href="queens-report-intro-edit.html#lineage">§7</a>.</span></div>
+</section>
+
+<!-- ============================ planned scenes ======================= -->
+<section class="scene planned" id="coming">
+  <h2>More scenes<span class="soon">in progress</span></h2>
+  <ul>
+    <li><b>Symmetry (D4)</b> — place queens and watch all 8 orientations fold to one canonical key.</li>
+    <li><b>Board ⇄ graph</b> — the same game as vertex deletion on the queen-attack graph (Node Kayles).</li>
+    <li><b>Search X-ray</b> — a live small-board search: α–β cutoffs, table hits, and the move-ordering A/B.</li>
+    <li><b>The 18×18 showcase</b> — step through the winning line <code>I9 K8 G10 …</code> and its deletion schedule.</li>
+    <li><b>Sprague–Grundy playground</b> — components, nimbers, XOR, and the heap-sum trick.</li>
+    <li><b>Nimber sequence &amp; speedup timeline</b> — A344227 extended, and 56 minutes → 13 seconds.</li>
+  </ul>
+</section>
+
+<footer class="pagefoot">
+  Companion to the <a href="queens-report-intro-edit.html">Queens report</a> and the
+  n=18 paper. Single file, no dependencies; the engine is validated against the Rust
+  solver's verdicts, node counts, and the OEIS A344227 nimbers
+  (<code>queens-explorable-test.mjs</code>).
+</footer>
+
+</div><!-- /wrap -->
+
+<!-- ====================================================================
+     queens-core — the engine. Pure logic, no DOM: this block is extracted
+     and run under Node by queens-explorable-test.mjs, so keep it free of
+     browser globals. Mirrors rust/src/queens/{geom.rs, solver/{naive,memo,
+     nimber}.rs}: masks are BigInts with bit s = square s = r*n + c.
+     ==================================================================== -->
+<script id="queens-core">
+'use strict';
+var QueensCore = (function () {
+
+  var clz32 = Math.clz32; // cached: hot in canon and the search loop
+
+  // The 8 symmetries of the square applied to (row, col) — geom.rs::symmetry.
+  function symImage(t, r, c, n) {
+    var m1 = n - 1 - r, m2 = n - 1 - c;
+    switch (t) {
+      case 0:  return [r, c];    // identity
+      case 1:  return [c, m1];   // rotate 90°
+      case 2:  return [m1, m2];  // rotate 180°
+      case 3:  return [m2, r];   // rotate 270°
+      case 4:  return [r, m2];   // flip horizontally
+      case 5:  return [m1, c];   // flip vertically
+      case 6:  return [c, r];    // transpose
+      default: return [m2, m1];  // anti-transpose
+    }
+  }
+
+  function bitIndex(pow2) { // index of a one-bit BigInt
+    var i = 0;
+    while (pow2 > 0xffffffffn) { pow2 >>= 32n; i += 32; }
+    return i + 31 - clz32(Number(pow2));
+  }
+  function forEachBit(mask, fn) {
+    while (mask) {
+      var lsb = mask & -mask;
+      fn(bitIndex(lsb));
+      mask ^= lsb;
+    }
+  }
+  function popcount(mask) {
+    var k = 0;
+    while (mask) { mask &= mask - 1n; k++; }
+    return k;
+  }
+
+  // Board geometry: attack masks, forcing move order, symmetry permutations.
+  function Queens(n) {
+    this.n = n;
+    var nn = n * n;
+    this.bit = new Array(nn);
+    for (var s = 0; s < nn; s++) this.bit[s] = 1n << BigInt(s);
+    this.board = (1n << BigInt(nn)) - 1n;
+    this.attack = new Array(nn); // attack[s] = s plus its row/col/diagonals
+    for (var r = 0; r < n; r++) {
+      for (var c = 0; c < n; c++) {
+        var mask = 0n;
+        for (var rr = 0; rr < n; rr++) {
+          for (var cc = 0; cc < n; cc++) {
+            if (rr === r || cc === c || rr - cc === r - c || rr + cc === r + c) {
+              mask |= this.bit[rr * n + cc];
+            }
+          }
+        }
+        this.attack[r * n + c] = mask;
+      }
+    }
+    // Forcing order: most-blocking squares first (stable, index tie-break) so
+    // winning moves surface early and the α-β cutoff fires — geom.rs::new.
+    var pc = this.attack.map(popcount);
+    this.order = [];
+    for (s = 0; s < nn; s++) this.order.push(s);
+    this.order.sort(function (a, b) { return pc[b] - pc[a] || a - b; });
+    // Symmetry permutations on square indices: sym[t][s] = image of s.
+    this.sym = [];
+    for (var t = 0; t < 8; t++) {
+      var perm = new Array(nn);
+      for (s = 0; s < nn; s++) {
+        var img = symImage(t, Math.floor(s / n), s % n, n);
+        perm[s] = img[0] * n + img[1];
+      }
+      this.sym.push(perm);
+    }
+  }
+  Queens.prototype.square = function (r, c) { return r * this.n + c; };
+  Queens.prototype.isAvailable = function (blocked, sq) {
+    return (this.board & this.bit[sq]) !== 0n && (blocked & this.bit[sq]) === 0n;
+  };
+  Queens.prototype.noMoves = function (blocked) {
+    return (this.board & ~blocked) === 0n;
+  };
+  Queens.prototype.place = function (blocked, sq) {
+    return blocked | this.attack[sq];
+  };
+  Queens.prototype.availableMask = function (blocked) {
+    return this.board & ~blocked;
+  };
+  Queens.prototype.availableCount = function (blocked) {
+    return popcount(this.availableMask(blocked));
+  };
+  Queens.prototype.center = function () {
+    if (this.n % 2 === 0) return null;
+    var m = (this.n - 1) / 2;
+    return this.square(m, m);
+  };
+  Queens.prototype.mirror = function (sq) { return this.sym[2][sq]; };
+  // Canonical (smallest) image of `mask` under the 8 board symmetries.
+  // Hot path (called per expanded node): all transform work and comparison
+  // happens in plain 32-bit words; a BigInt is assembled only if some
+  // transform actually beats the input (else the input is returned as-is,
+  // preserving `canon(m) === m` identity for canonical inputs).
+  Queens.prototype.canon = function (mask) {
+    var nw = (this.n * this.n + 31) >> 5, w;
+    var src = this._w1 || (this._w1 = new Array(nw));
+    for (w = 0; w < nw; w++) src[w] = 0;
+    var m = mask, wi = 0;
+    while (m) { src[wi++] = Number(m & 0xffffffffn); m >>= 32n; }
+    var best = this._w2 || (this._w2 = new Array(nw));
+    var img = this._w3 || (this._w3 = new Array(nw));
+    for (w = 0; w < nw; w++) best[w] = src[w];
+    var improved = false;
+    for (var t = 1; t < 8; t++) {
+      var perm = this.sym[t];
+      for (w = 0; w < nw; w++) img[w] = 0;
+      for (w = 0; w < nw; w++) {
+        var x = src[w], base = w << 5;
+        while (x) {
+          var lsb = x & -x;
+          var p = perm[base + (31 - clz32(lsb))];
+          img[p >> 5] |= 1 << (p & 31);
+          x ^= lsb;
+        }
+      }
+      for (w = nw - 1; w >= 0; w--) { // unsigned lexicographic, high word first
+        var a = img[w] >>> 0, b = best[w] >>> 0;
+        if (a !== b) {
+          if (a < b) {
+            for (var k = 0; k < nw; k++) best[k] = img[k];
+            improved = true;
+          }
+          break;
+        }
+      }
+    }
+    if (!improved) return mask;
+    var big = 0n;
+    for (w = nw - 1; w >= 0; w--) big = (big << 32n) | BigInt(best[w] >>> 0);
+    return big;
+  };
+  // Canonical transposition key: canonicalize the *available* squares.
+  Queens.prototype.posKey = function (blocked) {
+    return this.canon(this.board & ~blocked);
+  };
+  // One representative first move per symmetry orbit of the empty board.
+  Queens.prototype.distinctFirstMoves = function () {
+    var seen = new Set(), out = [];
+    for (var i = 0; i < this.order.length; i++) {
+      var sq = this.order[i];
+      var key = this.posKey(this.place(0n, sq));
+      if (!seen.has(key)) { seen.add(key); out.push(sq); }
+    }
+    return out;
+  };
+  Queens.prototype.firstAvailable = function (blocked) {
+    for (var i = 0; i < this.order.length; i++) {
+      if (this.isAvailable(blocked, this.order[i])) return this.order[i];
+    }
+    return -1;
+  };
+
+  // Memo-less ground-truth negamax (solver/naive.rs) — tests only, n small.
+  function naiveWins(q, blocked) {
+    for (var i = 0; i < q.order.length; i++) {
+      var sq = q.order[i];
+      if (q.isAvailable(blocked, sq) && !naiveWins(q, q.place(blocked, sq))) return true;
+    }
+    return false;
+  }
+
+  // The memoized + symmetry-folded cutoff search (solver/memo.rs::wins_keyed).
+  // `nodes` counts canonical-key misses only (actual expansions) — comparable
+  // to the Rust `symmetry` solver. The memo is additionally aliased under the
+  // *raw* available mask: transpositions that arrive by move-order permutation
+  // (the bulk) then skip the 8-transform canon entirely. Any available-mask
+  // names the same game value as its canonical image, so mixing raw and
+  // canonical keys in one map is sound.
+  function Solver(q) {
+    this.q = q;
+    this.memo = new Map(); // available-mask (raw or canonical) -> mover wins?
+    this.nodes = 0;        // distinct canonical positions expanded
+    // keep[sq] = board & ~attack[sq]: child available = avail & keep[sq].
+    this.keep = q.attack.map(function (a) { return q.board & ~a; });
+  }
+  Solver.prototype.wins = function (blocked) {
+    return this.winsAvail(this.q.board & ~blocked);
+  };
+  // The search recurses on the available mask directly; per-square membership
+  // is tested in plain 32-bit words extracted once per node.
+  Solver.prototype.winsAvail = function (avail) {
+    var hit = this.memo.get(avail);
+    if (hit !== undefined) return hit;
+    var q = this.q;
+    var key = q.canon(avail);
+    if (key !== avail) {
+      hit = this.memo.get(key);
+      if (hit !== undefined) { this.memo.set(avail, hit); return hit; }
+    }
+    this.nodes++;
+    var aw = [], m = avail; // local: this frame recurses below
+    while (m) { aw.push(Number(m & 0xffffffffn)); m >>= 32n; }
+    var order = q.order, keep = this.keep, result = false;
+    for (var i = 0; i < order.length; i++) {
+      var sq = order[i], w = sq >> 5;
+      if (w >= aw.length || !((aw[w] >>> (sq & 31)) & 1)) continue;
+      var child = avail & keep[sq];
+      // Terminal-child fast path: opponent cannot move ⇒ we win at once.
+      if (child === 0n) { result = true; break; }
+      if (!this.winsAvail(child)) { result = true; break; }
+    }
+    this.memo.set(key, result);
+    if (avail !== key) this.memo.set(avail, result);
+    return result;
+  };
+  // An optimal move and whether it wins (geom.rs::best_move): a winning move
+  // if one exists, else the first available (all lose). null if no move.
+  Solver.prototype.bestMove = function (blocked) {
+    var q = this.q, avail = q.board & ~blocked, first = -1;
+    for (var i = 0; i < q.order.length; i++) {
+      var sq = q.order[i];
+      if ((avail & q.bit[sq]) === 0n) continue;
+      if (first < 0) first = sq;
+      var child = avail & this.keep[sq];
+      if (child === 0n || !this.winsAvail(child)) return { sq: sq, wins: true };
+    }
+    return first < 0 ? null : { sq: first, wins: false };
+  };
+
+  // As naiveWins, but counting expansions (the memo-less baseline series).
+  function naiveCount(q, blocked) {
+    var nodes = 0;
+    function rec(b) {
+      nodes++;
+      for (var i = 0; i < q.order.length; i++) {
+        var sq = q.order[i];
+        if (q.isAvailable(b, sq) && !rec(q.place(b, sq))) return true;
+      }
+      return false;
+    }
+    var wins = rec(blocked);
+    return { wins: wins, nodes: nodes };
+  }
+
+  // Ablation rung 1: naive with NO forcing order (index order) — how much the
+  // move ordering is worth. Counting only; pre-canned in QueensData.ablation.
+  function naiveCountUnordered(q, blocked) {
+    var nn = q.n * q.n, nodes = 0;
+    function rec(b) {
+      nodes++;
+      for (var sq = 0; sq < nn; sq++) {
+        if (q.isAvailable(b, sq) && !rec(q.place(b, sq))) return true;
+      }
+      return false;
+    }
+    var wins = rec(blocked);
+    return { wins: wins, nodes: nodes };
+  }
+
+  // Ablation rung 3: memo on the RAW available mask only — transpositions by
+  // move-order permutation merge, but the 8 symmetric images stay separate.
+  // The gap to Solver is exactly what the D4 fold buys.
+  function RawMemoSolver(q) {
+    Solver.call(this, q);
+  }
+  RawMemoSolver.prototype = Object.create(Solver.prototype);
+  RawMemoSolver.prototype.constructor = RawMemoSolver;
+  RawMemoSolver.prototype.winsAvail = function (avail) {
+    var hit = this.memo.get(avail);
+    if (hit !== undefined) return hit;
+    this.nodes++;
+    var q = this.q, aw = [], m = avail;
+    while (m) { aw.push(Number(m & 0xffffffffn)); m >>= 32n; }
+    var order = q.order, keep = this.keep, result = false;
+    for (var i = 0; i < order.length; i++) {
+      var sq = order[i], w = sq >> 5;
+      if (w >= aw.length || !((aw[w] >>> (sq & 31)) & 1)) continue;
+      var child = avail & keep[sq];
+      if (child === 0n) { result = true; break; }
+      if (!this.winsAvail(child)) { result = true; break; }
+    }
+    this.memo.set(avail, result);
+    return result;
+  };
+
+  // Solver with search-statistics counters (the growth scene). A separate
+  // instrumented copy of winsAvail so the production hot path stays clean —
+  // node counts and verdicts are identical (harness-checked). Counter names
+  // mirror the Rust `count --branching` Tally.
+  function StatsSolver(q) {
+    Solver.call(this, q);
+    this.stats = {
+      rawHits: 0,      // memo hits on the raw available mask (move-order transpositions)
+      canonHits: 0,    // memo hits only after the D4 fold (symmetry merges)
+      edges: 0,        // child recursions = moves explored into
+      tried: 0,        // available moves iterated (incl. terminals and the cutoff move)
+      terminalWins: 0, // wins by a move that kills every remaining square
+      winNodes: 0, lossNodes: 0,
+      winTriedSum: 0   // Σ tried at win nodes: mean = cutoff position (ordering quality)
+    };
+  }
+  StatsSolver.prototype = Object.create(Solver.prototype);
+  StatsSolver.prototype.constructor = StatsSolver;
+  StatsSolver.prototype.winsAvail = function (avail) {
+    var S = this.stats;
+    var hit = this.memo.get(avail);
+    if (hit !== undefined) { S.rawHits++; return hit; }
+    var q = this.q;
+    var key = q.canon(avail);
+    if (key !== avail) {
+      hit = this.memo.get(key);
+      if (hit !== undefined) { S.canonHits++; this.memo.set(avail, hit); return hit; }
+    }
+    this.nodes++;
+    var aw = [], m = avail;
+    while (m) { aw.push(Number(m & 0xffffffffn)); m >>= 32n; }
+    var order = q.order, keep = this.keep, result = false, tried = 0;
+    for (var i = 0; i < order.length; i++) {
+      var sq = order[i], w = sq >> 5;
+      if (w >= aw.length || !((aw[w] >>> (sq & 31)) & 1)) continue;
+      tried++;
+      var child = avail & keep[sq];
+      if (child === 0n) { S.terminalWins++; result = true; break; }
+      S.edges++;
+      if (!this.winsAvail(child)) { result = true; break; }
+    }
+    S.tried += tried;
+    if (result) { S.winNodes++; S.winTriedSum += tried; } else { S.lossNodes++; }
+    this.memo.set(key, result);
+    if (avail !== key) this.memo.set(avail, result);
+    return result;
+  };
+
+  // Full Sprague-Grundy value via mex, memoized, no cutoff (solver/nimber.rs).
+  function Grundy(q) {
+    this.q = q;
+    this.memo = new Map();
+    this.nodes = 0;
+  }
+  Grundy.prototype.grundy = function (blocked) {
+    var key = this.q.posKey(blocked);
+    var hit = this.memo.get(key);
+    if (hit !== undefined) return hit;
+    this.nodes++;
+    var q = this.q, seen = 0;
+    for (var i = 0; i < q.order.length; i++) {
+      var sq = q.order[i];
+      if (q.isAvailable(blocked, sq)) seen |= 1 << this.grundy(q.place(blocked, sq));
+    }
+    var mex = 0;
+    while (seen & (1 << mex)) mex++;
+    this.memo.set(key, mex);
+    return mex;
+  };
+  Grundy.prototype.nimber = function () { return this.grundy(0n); };
+
+  // The odd-board winning line: centre, then mirror every reply (geom.rs).
+  function mirrorLine(q) {
+    var line = [], blocked = 0n, c = q.center();
+    line.push(c);
+    blocked = q.place(blocked, c);
+    var s;
+    while ((s = q.firstAvailable(blocked)) >= 0) {
+      line.push(s);
+      blocked = q.place(blocked, s);
+      var m = q.mirror(s);
+      line.push(m);
+      blocked = q.place(blocked, m);
+    }
+    return line;
+  }
+
+  // Square names in the Rust CLI's convention: column letter + 1-based rank.
+  function sqName(q, sq) {
+    return String.fromCharCode(65 + (sq % q.n)) + (Math.floor(sq / q.n) + 1);
+  }
+  function parseSq(q, name) {
+    var m = /^([A-Z])(\d+)$/.exec(name.toUpperCase());
+    if (!m) throw new Error('bad square: ' + name);
+    var c = m[1].charCodeAt(0) - 65, r = parseInt(m[2], 10) - 1;
+    if (c >= q.n || r < 0 || r >= q.n) throw new Error('off-board square: ' + name);
+    return q.square(r, c);
+  }
+
+  return {
+    Queens: Queens, Solver: Solver, StatsSolver: StatsSolver,
+    RawMemoSolver: RawMemoSolver, Grundy: Grundy,
+    naiveWins: naiveWins, naiveCount: naiveCount,
+    naiveCountUnordered: naiveCountUnordered, mirrorLine: mirrorLine,
+    popcount: popcount, forEachBit: forEachBit,
+    sqName: sqName, parseSq: parseSq
+  };
+})();
+</script>
+
+<!-- ====================================================================
+     queens-data — hard-coded results the engine cannot recompute live.
+     Also extracted by the Node test harness.
+     ==================================================================== -->
+<script id="queens-data">
+'use strict';
+var QueensData = {
+  // OEIS A344227: Sprague-Grundy values of the n×n game, n = 0..13 (Jenrich).
+  A344227: [0, 1, 1, 2, 1, 3, 1, 2, 3, 1, 0, 1, 0, 1],
+  // This project's extension (2026-07-01, heap-sum nimber engine); 17+ open.
+  nimberExt: { 14: 0, 15: 1, 16: 0 },
+  // n=18 headline result (2026-06): FIRST player wins, opening I9; the 15-ply
+  // principal variation, confirmed by two independent evaluator configs.
+  n18: {
+    verdict: 'first',
+    pv: ['I9', 'K8', 'G10', 'J11', 'H3', 'M7', 'N16', 'E4', 'P6', 'D12', 'O13', 'F2', 'R5', 'L17', 'A14'],
+    nodesW17: 258.3e9,
+    nodesW20: 114.3e9
+  },
+  // Search-space milestones from the Rust solver (the growth scene). Metrics
+  // differ by solver era — each point says what it counts.
+  milestones: [
+    { n: 12, v: 1060823, label: '1,060,823 distinct positions (iso key) — the exact validation gate' },
+    { n: 14, v: 49.3e6, label: '≈49.3M distinct positions (D4 key)' },
+    { n: 16, v: 10017867872, label: '10.0B nodes — first complete solver, 56 minutes (June 14)' },
+    { n: 16, v: 178555417, label: '178.6M nodes — current solver, 13.4 seconds' },
+    { n: 18, v: 258.3e9, label: '258.3B nodes — the n=18 proof (W17 config)' },
+    { n: 18, v: 114.3e9, label: '114.3B nodes — independent n=18 cross-check (W20 config)' }
+  ],
+  // naive (no memo) at n=10 with THIS page's engine: deterministic but ~40s,
+  // so it ships precomputed (2026-07-03). Re-verify: harness with
+  // QUEENS_TEST_SLOW=1.
+  naive10: { n: 10, nodes: 13990969 },
+  // Tactic-ablation ladder: positions expanded by this page's engine with the
+  // ideas switched on one at a time (each rung measured on top of the one
+  // above). Deterministic node counts, pre-canned 2026-07-03; the harness
+  // re-verifies every cell (n=10 cells under QUEENS_TEST_SLOW=1 — minutes).
+  ablation: {
+    ns: [4, 5, 6, 7, 8, 9, 10],
+    rungs: [
+      { key: 'unordered', name: 'bare search',
+        what: 'negamax + the α–β cutoff, squares tried in index order — no other ideas',
+        nodes: { 4: 14, 5: 276, 6: 224, 7: 16526, 8: 294144, 9: 208202, 10: 17172037 } },
+      { key: 'ordered', name: '+ forcing move order',
+        what: 'try the most-blocking squares first, so winning moves surface early and the cutoff fires sooner',
+        nodes: { 4: 10, 5: 50, 6: 154, 7: 1556, 8: 7612, 9: 49752, 10: 13990969 } },
+      { key: 'memo', name: '+ transposition memo',
+        what: 'remember every position solved; different move orders reaching the same position merge',
+        nodes: { 4: 6, 5: 22, 6: 51, 7: 350, 8: 1277, 9: 5969, 10: 590717 } },
+      { key: 'sym', name: '+ symmetry folding',
+        what: 'the 8 mirror-images of a position share one memo entry (the D4 canonical key)',
+        nodes: { 4: 4, 5: 5, 6: 27, 7: 54, 8: 625, 9: 853, 10: 94083 } }
+    ],
+    // The reference in the other direction: keep memo + symmetry but REMOVE
+    // the α–β cutoff (compute full Sprague-Grundy values — every child visited).
+    noCutoff: {
+      name: 'remove the cutoff instead',
+      what: 'memo + symmetry but no α–β: every child of every position is evaluated (the full-mex Grundy engine)',
+      nodes: { 4: 10, 5: 47, 6: 208, 7: 1336, 8: 8854, 9: 68054, 10: 552611 }
+    }
+  },
+  // The production Rust solver's tactic stack at n=16 (best clean-box wall
+  // seconds + nodes; from the repo leaderboard, conditions vary slightly by
+  // era — the shape is the story). In order of landing.
+  lineage16: [
+    { tag: 'first complete solver', wall: 3360, nodes: 10.0e9,
+      what: 'June 14: plain memoized search proves the second player wins in 56 minutes' },
+    { tag: 'flat TT + graph key', wall: 209, nodes: 6.1e9,
+      what: 'one flat lock-free table; a selective isomorphism key merges graph-identical positions' },
+    { tag: 'dense endgame table (W8)', wall: 135, nodes: 5.1e9,
+      what: 'every ≤8-square endgame answered from a precomputed table; huge-page TT' },
+    { tag: 'dense layers to W12', wall: 99, nodes: 2.0e9,
+      what: 'pext-coded induced subgraphs: tails up to 12 squares decided with no search at all' },
+    { tag: 'fused ETC wave', wall: 92, nodes: 1.70e9,
+      what: 'probe all children in the table before recursing; any already-known win cuts off instantly' },
+    { tag: 'dynamic move ordering', wall: 62, nodes: 1.14e9,
+      what: 're-sort moves at every node by current blocking power — the single biggest lever, −30% wall' },
+    { tag: 'ETC follows the ordering', wall: 57, nodes: 0.92e9,
+      what: 'the child-probe budget spent on the dynamically-ordered children' },
+    { tag: 'dense ceiling to W16', wall: 33.9, nodes: 0.40e9,
+      what: 'per-row pext table build makes 16-square dense layers pay — node count halves' },
+    { tag: 'branchless counting sort', wall: 27, nodes: 0.37e9,
+      what: 'the move re-sort was the top branch-mispredict site; counting sort removes the branches' },
+    { tag: 'W17 + skip pc=18', wall: 23.4, nodes: 0.31e9,
+      what: '17-square dense layer; positions with 18 squares skip ALL table work (their children are all leaves)' },
+    { tag: 'killer replies', wall: 13.77, nodes: 0.18e9,
+      what: 'a refutation found in one subtree is tried first in its siblings — nodes −37%' },
+    { tag: 'kernel micro-opts', wall: 13.43, nodes: 0.18e9,
+      what: 'mask prefetch, AVX-512 compress-store, root adjacency carry — the 2026-07-02 record' }
+  ],
+  // Does the first player win n×n? From the nimbers where known; n=18 solved
+  // outcome-only. Returns true / false / null (open).
+  firstPlayerWins: function (n) {
+    if (n % 2 === 1) return true; // centre + mirror, any odd n
+    if (n < this.A344227.length) return this.A344227[n] !== 0;
+    if (n in this.nimberExt) return this.nimberExt[n] !== 0;
+    if (n === 18) return true;
+    return null;
+  }
+};
+</script>
+
+<!-- ====================================================================
+     scenes — board widget + the two live scenes. Browser-only from here.
+     Widgets are palette-parameterized and take their stage element, so the
+     report can later graft them into its own figure slots (Approach C).
+     ==================================================================== -->
+<script id="queens-scenes">
+'use strict';
+(function () {
+  var COL = {
+    bg: '#0f1419', fg: '#e6edf3', dim: '#9fb0c0', faint: '#6b7d8f',
+    accent: '#4cc2ff', accent2: '#ffb454', accent3: '#7ee787', accent4: '#ff7b9c',
+    grid: '#232c38', axis: '#3a4654', cellbg: '#1a212b', cellbd: '#2a3542',
+    blockedbg: '#131920'
+  };
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  function el(tag, attrs, text) {
+    var e = document.createElementNS(SVGNS, tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function add(parent, tag, attrs, text) {
+    var e = el(tag, attrs, text);
+    parent.appendChild(e);
+    return e;
+  }
+  function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
+  function fmtInt(v) { return v.toLocaleString('en-US'); }
+  function fmtCompact(v) {
+    if (v >= 1e9) return (v / 1e9).toFixed(1) + 'B';
+    if (v >= 1e6) return (v / 1e6).toFixed(1) + 'M';
+    if (v >= 1e4) return (v / 1e3).toFixed(0) + 'K';
+    return fmtInt(v);
+  }
+  var Core = QueensCore;
+
+  /* ---------------- board widget ----------------
+     makeBoard(svg, q, {onClick, onHover}) -> {render(state)}
+     state: { blocked, queens: [{sq, by:'you'|'cpu'}], lastSq, pairSq,
+              hoverSq, gameOver }
+     Rank 1 is drawn at the BOTTOM (chess convention, matches sqName). */
+  function makeBoard(svg, q, handlers) {
+    var n = q.n, S = 40, LAB = 20;
+    var W = n * S + LAB, H = n * S + LAB;
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.style.maxWidth = (n * 46 + LAB) + 'px';
+    clear(svg);
+    var cellsG = add(svg, 'g', {});
+    var marksG = add(svg, 'g', { 'pointer-events': 'none' });
+    // coordinate labels
+    for (var c = 0; c < n; c++) {
+      add(svg, 'text', {
+        x: LAB + c * S + S / 2, y: H - 5, 'text-anchor': 'middle',
+        fill: COL.faint, 'font-size': 11, 'font-family': 'monospace'
+      }, String.fromCharCode(65 + c));
+    }
+    for (var r = 0; r < n; r++) {
+      add(svg, 'text', {
+        x: LAB - 7, y: (n - 1 - r) * S + S / 2 + 4, 'text-anchor': 'middle',
+        fill: COL.faint, 'font-size': 11, 'font-family': 'monospace'
+      }, String(r + 1));
+    }
+    var rects = new Array(n * n);
+    for (var sq = 0; sq < n * n; sq++) {
+      var rr = Math.floor(sq / n), cc = sq % n;
+      var x = LAB + cc * S, y = (n - 1 - rr) * S;
+      var rect = add(cellsG, 'rect', {
+        x: x + 0.75, y: y + 0.75, width: S - 1.5, height: S - 1.5, rx: 3,
+        fill: COL.cellbg, stroke: COL.cellbd, 'stroke-width': 1
+      });
+      rect.style.cursor = 'pointer';
+      (function (s, rect) {
+        rect.addEventListener('click', function () { handlers.onClick && handlers.onClick(s); });
+        rect.addEventListener('mouseenter', function () { handlers.onHover && handlers.onHover(s); });
+        rect.addEventListener('mouseleave', function () { handlers.onHover && handlers.onHover(-1); });
+      })(sq, rect);
+      rects[sq] = rect;
+    }
+    function cellXY(sq) {
+      var r = Math.floor(sq / n), c = sq % n;
+      return [LAB + c * S + S / 2, (n - 1 - r) * S + S / 2];
+    }
+    function render(st) {
+      var avail = q.availableMask(st.blocked);
+      var hoverAttack = 0n;
+      if (st.hoverSq >= 0 && q.isAvailable(st.blocked, st.hoverSq) && !st.gameOver) {
+        hoverAttack = q.attack[st.hoverSq] & avail;
+      }
+      var queenAt = {};
+      st.queens.forEach(function (p) { queenAt[p.sq] = p.by; });
+      for (var s = 0; s < n * n; s++) {
+        var fill = COL.blockedbg;
+        if (queenAt[s] !== undefined) {
+          fill = queenAt[s] === 'you' ? 'rgba(76,194,255,0.20)' : 'rgba(255,180,84,0.20)';
+        } else if ((avail & q.bit[s]) !== 0n) {
+          fill = (hoverAttack & q.bit[s]) !== 0n ? 'rgba(255,123,156,0.25)' : COL.cellbg;
+        }
+        rects[s].setAttribute('fill', fill);
+        rects[s].style.cursor =
+          (avail & q.bit[s]) !== 0n && !st.gameOver ? 'pointer' : 'default';
+      }
+      clear(marksG);
+      // available markers
+      Core.forEachBit(avail, function (s) {
+        if ((hoverAttack & q.bit[s]) !== 0n) return;
+        var xy = cellXY(s);
+        add(marksG, 'circle', { cx: xy[0], cy: xy[1], r: 3.6, fill: COL.accent3, opacity: 0.85 });
+      });
+      // mirror-pair link (scene 2)
+      if (st.pairSq && st.pairSq.length === 2) {
+        var a = cellXY(st.pairSq[0]), b = cellXY(st.pairSq[1]);
+        add(marksG, 'line', {
+          x1: a[0], y1: a[1], x2: b[0], y2: b[1],
+          stroke: COL.accent2, 'stroke-width': 2, 'stroke-dasharray': '5 4', opacity: 0.8
+        });
+      }
+      // queens
+      st.queens.forEach(function (p) {
+        var xy = cellXY(p.sq);
+        add(marksG, 'text', {
+          x: xy[0], y: xy[1] + 8, 'text-anchor': 'middle',
+          fill: p.by === 'you' ? COL.accent : COL.accent2,
+          'font-size': 26, 'font-weight': 700
+        }, '♛');
+        if (p.sq === st.lastSq) {
+          add(marksG, 'rect', {
+            x: xy[0] - S / 2 + 1.5, y: xy[1] - S / 2 + 1.5, width: S - 3, height: S - 3,
+            rx: 3, fill: 'none', stroke: p.by === 'you' ? COL.accent : COL.accent2,
+            'stroke-width': 2
+          });
+        }
+      });
+    }
+    return { render: render };
+  }
+
+  function sizeButtons(container, sizes, onPick) {
+    var btns = [];
+    sizes.forEach(function (n) {
+      var b = document.createElement('button');
+      b.className = 'btn';
+      b.textContent = n + '×' + n;
+      b.addEventListener('click', function () { onPick(n); });
+      container.appendChild(b);
+      btns.push({ n: n, el: b });
+    });
+    return {
+      setActive: function (n) {
+        btns.forEach(function (b) {
+          b.el.setAttribute('aria-pressed', b.n === n ? 'true' : 'false');
+        });
+      }
+    };
+  }
+  function logMove(logEl, ply, by, name) {
+    var span = document.createElement('span');
+    span.className = by;
+    span.textContent = (by === 'you' ? 'You ' : 'Cpu ') + name;
+    logEl.appendChild(document.createTextNode((ply > 1 ? ' · ' : '') + ply + '. '));
+    logEl.appendChild(span);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  /* ---------------- scene 1: play the game ---------------- */
+  (function () {
+    var svg = document.getElementById('playBoard');
+    if (!svg) return;
+    var statusEl = document.getElementById('playStatus');
+    var oracleEl = document.getElementById('playOracle');
+    var logEl = document.getElementById('playLog');
+    var statEl = document.getElementById('playStat');
+    var youFirstBtn = document.getElementById('playYouFirst');
+    var cpuFirstBtn = document.getElementById('playCpuFirst');
+
+    var cache = {}; // n -> {q, solver}
+    var st = null;  // {q, solver, blocked, queens, lastSq, hoverSq, gameOver,
+                    //  turn:'you'|'cpu', youFirst, board, undoStack, ply}
+
+    function engineFor(n) {
+      if (!cache[n]) {
+        // Fresh evaluation of queens-core per board size: V8's BigInt type
+        // feedback stays monomorphic per n (mixing board sizes through one
+        // set of functions measured ~3x slower on the big boards). Falls
+        // back to the shared core where eval is unavailable (strict CSP).
+        var C = Core;
+        try {
+          var src = document.getElementById('queens-core').textContent;
+          C = new Function(src + '; return QueensCore;')();
+        } catch (e) { /* CSP: shared core still correct, just slower */ }
+        var q = new C.Queens(n);
+        cache[n] = { q: q, solver: new C.Solver(q) };
+      }
+      return cache[n];
+    }
+    function newGame(n, youFirst) {
+      var e = engineFor(n);
+      st = {
+        n: n, q: e.q, solver: e.solver, blocked: 0n, queens: [], lastSq: -1,
+        hoverSq: -1, gameOver: false, turn: youFirst ? 'you' : 'cpu',
+        youFirst: youFirst, undoStack: [], ply: 0,
+        board: makeBoard(svg, e.q, { onClick: onClick, onHover: onHover })
+      };
+      sizes.setActive(n);
+      youFirstBtn.setAttribute('aria-pressed', youFirst ? 'true' : 'false');
+      cpuFirstBtn.setAttribute('aria-pressed', youFirst ? 'false' : 'true');
+      logEl.textContent = '';
+      statusEl.textContent = 'Solving the ' + n + '×' + n + ' board…';
+      render();
+      // Solve the root off the click handler so the status paints first.
+      setTimeout(function () {
+        var t0 = Date.now();
+        st.solver.wins(0n); // warms the memo; instant on re-selects
+        var ms = Date.now() - t0;
+        statEl.textContent = 'Solver memo: ' +
+          st.solver.nodes.toLocaleString() + ' distinct positions searched' +
+          (ms > 40 ? ' in ' + (ms / 1000).toFixed(1) + 's' : '') +
+          ' (8 mirror-images share each entry).';
+        if (st.turn === 'cpu') { cpuMove(); } else { update(); }
+      }, 30);
+    }
+    function snapshot() {
+      st.undoStack.push({
+        blocked: st.blocked, queens: st.queens.slice(), lastSq: st.lastSq, ply: st.ply,
+        log: logEl.innerHTML
+      });
+    }
+    function placeQueen(sq, by) {
+      st.ply++;
+      st.blocked = st.q.place(st.blocked, sq);
+      st.queens.push({ sq: sq, by: by });
+      st.lastSq = sq;
+      logMove(logEl, st.ply, by, Core.sqName(st.q, sq));
+    }
+    function onClick(sq) {
+      if (!st || st.gameOver || st.turn !== 'you') return;
+      if (!st.q.isAvailable(st.blocked, sq)) return;
+      snapshot();
+      placeQueen(sq, 'you');
+      st.turn = 'cpu';
+      update();
+      if (!st.gameOver) setTimeout(cpuMove, 260);
+    }
+    function cpuMove() {
+      if (st.gameOver || st.turn !== 'cpu') return;
+      var mv = st.solver.bestMove(st.blocked);
+      if (!mv) { update(); return; } // no move: update() declares the result
+      placeQueen(mv.sq, 'cpu');
+      st.turn = 'you';
+      update();
+    }
+    function onHover(sq) {
+      if (!st) return;
+      st.hoverSq = sq;
+      render();
+    }
+    function render() {
+      st.board.render(st);
+    }
+    function update() {
+      if (st.q.noMoves(st.blocked)) {
+        st.gameOver = true;
+        var loser = st.turn; // the player to move has no square
+        statusEl.innerHTML = loser === 'cpu'
+          ? 'The computer has no square left — <span class="win">you win!</span>'
+          : 'No square left for you — <span class="loss">you lose.</span> ' +
+            'The oracle saw it coming.';
+        oracleEl.textContent = 'Game over after ' + st.ply + ' queens.';
+        render();
+        return;
+      }
+      statusEl.textContent = st.turn === 'you'
+        ? 'Your move — click any free square (green dot).'
+        : 'Computer is thinking…';
+      var moverWins = st.solver.wins(st.blocked);
+      var who = st.turn === 'you' ? 'You' : 'The computer';
+      oracleEl.innerHTML = who + (st.turn === 'you' ? ' are' : ' is') +
+        ' to move and ' + (moverWins
+          ? '<span class="win">can force a win</span>'
+          : '<span class="loss">will lose against perfect play</span>') +
+        ' from this position.';
+      render();
+    }
+    function undo() {
+      if (!st || !st.undoStack.length) return;
+      var snap = st.undoStack.pop();
+      st.blocked = snap.blocked;
+      st.queens = snap.queens;
+      st.lastSq = snap.lastSq;
+      st.ply = snap.ply;
+      logEl.innerHTML = snap.log;
+      st.gameOver = false;
+      st.turn = 'you';
+      update();
+    }
+
+    var sizes = sizeButtons(document.getElementById('playSizes'),
+      [4, 5, 6, 7, 8, 9, 10],
+      function (n) { newGame(n, st ? st.youFirst : true); });
+    youFirstBtn.addEventListener('click', function () { newGame(st.n, true); });
+    cpuFirstBtn.addEventListener('click', function () { newGame(st.n, false); });
+    document.getElementById('playUndo').addEventListener('click', undo);
+    document.getElementById('playReset').addEventListener('click',
+      function () { newGame(st.n, st.youFirst); });
+    newGame(8, true);
+  })();
+
+  /* ---------------- scene 2: odd boards are free ---------------- */
+  (function () {
+    var svg = document.getElementById('mirrorBoard');
+    if (!svg) return;
+    var statusEl = document.getElementById('mirrorStatus');
+    var logEl = document.getElementById('mirrorLog');
+    var statEl = document.getElementById('mirrorStat');
+    var st = null;
+
+    function newGame(n) {
+      var q = new Core.Queens(n);
+      st = {
+        n: n, q: q, blocked: 0n, queens: [], lastSq: -1, pairSq: null,
+        hoverSq: -1, gameOver: false, turn: 'cpu', ply: 0, pairs: 0,
+        board: makeBoard(svg, q, { onClick: onClick, onHover: onHover })
+      };
+      sizes.setActive(n);
+      logEl.textContent = '';
+      statEl.textContent = '';
+      // The whole strategy: centre first, then mirror. No search happens.
+      var c = q.center();
+      place(c, 'cpu');
+      st.turn = 'you';
+      update();
+    }
+    function place(sq, by) {
+      st.ply++;
+      st.blocked = st.q.place(st.blocked, sq);
+      st.queens.push({ sq: sq, by: by });
+      st.lastSq = sq;
+      logMove(logEl, st.ply, by, Core.sqName(st.q, sq));
+    }
+    function onClick(sq) {
+      if (!st || st.gameOver || st.turn !== 'you') return;
+      if (!st.q.isAvailable(st.blocked, sq)) return;
+      st.pairSq = null;
+      place(sq, 'you');
+      var m = st.q.mirror(sq);
+      // The pairing lemma guarantees the mirror is still free.
+      place(m, 'cpu');
+      st.pairs++;
+      st.pairSq = [sq, m];
+      statEl.textContent = 'Mirrored pairs: ' + st.pairs +
+        ' — the computer answered ' + Core.sqName(st.q, sq) + ' with ' +
+        Core.sqName(st.q, m) + ' = its 180° rotation. Zero positions searched.';
+      update();
+    }
+    function onHover(sq) {
+      if (!st) return;
+      st.hoverSq = sq;
+      st.board.render(st);
+    }
+    function update() {
+      if (st.q.noMoves(st.blocked)) {
+        st.gameOver = true;
+        statusEl.innerHTML = 'No square left for you — ' +
+          '<span class="loss">you lose</span>, after ' + st.pairs +
+          ' mirrored pair' + (st.pairs === 1 ? '' : 's') +
+          '. The centre-and-mirror strategy never needed to think.';
+      } else {
+        statusEl.textContent = 'Your move — the computer took the centre and ' +
+          'will mirror whatever you play.';
+      }
+      st.board.render(st);
+    }
+
+    var sizes = sizeButtons(document.getElementById('mirrorSizes'), [5, 7, 9],
+      function (n) { newGame(n); });
+    document.getElementById('mirrorReset').addEventListener('click',
+      function () { newGame(st.n); });
+    newGame(7);
+  })();
+
+  /* ---------------- scene 3: search-space growth ---------------- */
+  (function () {
+    var chartEl = document.getElementById('growthChart');
+    if (!chartEl) return;
+    // Chart series palette: darker steps of the report's hue families, snapped
+    // into the dark-mode lightness band and validated (dataviz six checks,
+    // all-pairs CVD) — the page accents themselves are too light for marks.
+    var SER = {
+      memo:  { color: '#1f97d4', label: 'memo + symmetry (this page)' },
+      naive: { color: '#c98123', label: 'naive — no memo (this page)' },
+      mile:  { color: '#cc4d75', label: 'Rust solver milestones' }
+    };
+    var D = QueensData;
+    var tipEl = document.getElementById('growthTip');
+    var cardEl = document.getElementById('growthCard');
+    var progressEl = document.getElementById('growthProgress');
+    var runBtn = document.getElementById('growthRun');
+
+    // results
+    var memoR = {};   // n -> {nodes, ms, stats}
+    var naiveR = {};  // n -> {nodes, pre}
+    var grundyR = {}; // n -> nimber
+    naiveR[10] = { nodes: D.naive10.nodes, pre: true };
+    var ran = false;
+
+    function freshCore() {
+      try {
+        return new Function(document.getElementById('queens-core').textContent +
+          '; return QueensCore;')();
+      } catch (e) { return Core; }
+    }
+
+    /* ---- chart ---- */
+    var W = 860, H = 380, ML = 56, MR = 14, MT = 12, MB = 34;
+    var plotW = W - ML - MR, plotH = H - MT - MB;
+    var NMAX = 18, DECADES = 12;
+    function x(n) { return ML + (n - 0.5) * plotW / NMAX; }
+    function y(v) { return MT + plotH - (Math.log(Math.max(v, 1)) / Math.LN10) / DECADES * plotH; }
+    var SUP = { 2: '²', 4: '⁴', 6: '⁶', 8: '⁸', 10: '¹⁰', 12: '¹²' };
+
+    function drawChart() {
+      clear(chartEl);
+      var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, tabindex: 0, role: 'img',
+        'aria-label': 'positions searched versus board size, log scale' });
+      chartEl.appendChild(svg);
+      // grid: one hairline per decade, labels every second decade
+      for (var d = 0; d <= DECADES; d++) {
+        var gy = y(Math.pow(10, d));
+        add(svg, 'line', { x1: ML, y1: gy, x2: W - MR, y2: gy, stroke: COL.grid, 'stroke-width': 1 });
+        if (d % 2 === 0) {
+          add(svg, 'text', { x: ML - 8, y: gy + 4, 'text-anchor': 'end', fill: COL.faint,
+            'font-size': 11, 'font-family': 'monospace' }, d === 0 ? '1' : '10' + SUP[d]);
+        }
+      }
+      for (var n = 2; n <= NMAX; n += 2) {
+        add(svg, 'text', { x: x(n), y: H - 12, 'text-anchor': 'middle', fill: COL.faint,
+          'font-size': 11, 'font-family': 'monospace' }, String(n));
+      }
+      add(svg, 'text', { x: ML + plotW / 2, y: H - 0.5, 'text-anchor': 'middle',
+        fill: COL.faint, 'font-size': 11 }, 'board size n');
+      // milestones: diamonds (no connecting line — metrics differ per point)
+      D.milestones.forEach(function (ms) {
+        var cx = x(ms.n), cy = y(ms.v);
+        add(svg, 'path', {
+          d: 'M' + cx + ' ' + (cy - 6.5) + ' L' + (cx + 6.5) + ' ' + cy +
+             ' L' + cx + ' ' + (cy + 6.5) + ' L' + (cx - 6.5) + ' ' + cy + ' Z',
+          fill: SER.mile.color, stroke: COL.cellbg, 'stroke-width': 2
+        });
+      });
+      add(svg, 'text', { x: x(18) - 10, y: y(258.3e9) - 12, 'text-anchor': 'end',
+        fill: COL.dim, 'font-size': 11.5 }, 'the n=18 proof');
+      // live series: line + ringed dots + end label
+      [['naive', naiveR], ['memo', memoR]].forEach(function (pair) {
+        var s = SER[pair[0]], data = pair[1];
+        var pts = [];
+        for (var n = 1; n <= 10; n++) if (data[n]) pts.push([n, data[n].nodes]);
+        if (!pts.length) return;
+        if (pts.length > 1) {
+          add(svg, 'polyline', {
+            points: pts.map(function (p) { return x(p[0]) + ',' + y(p[1]); }).join(' '),
+            fill: 'none', stroke: s.color, 'stroke-width': 2,
+            'stroke-linejoin': 'round', 'stroke-linecap': 'round'
+          });
+        }
+        pts.forEach(function (p) {
+          add(svg, 'circle', { cx: x(p[0]), cy: y(p[1]), r: 4.5, fill: s.color,
+            stroke: COL.cellbg, 'stroke-width': 2 });
+        });
+        var last = pts[pts.length - 1];
+        add(svg, 'text', { x: x(last[0]) + 10, y: y(last[1]) + 4, fill: COL.dim,
+          'font-size': 11.5 }, pair[0] === 'memo' ? 'memo + symmetry' : 'naive');
+      });
+      // crosshair + hover/focus overlay
+      var cross = add(svg, 'line', { x1: 0, y1: MT, x2: 0, y2: MT + plotH,
+        stroke: COL.axis, 'stroke-width': 1, visibility: 'hidden' });
+      var overlay = add(svg, 'rect', { x: ML, y: MT, width: plotW, height: plotH,
+        fill: 'transparent' });
+      overlay.style.cursor = 'crosshair';
+      function dataAt(n) {
+        var rows = [];
+        if (naiveR[n]) rows.push({ c: SER.naive.color, v: fmtInt(naiveR[n].nodes),
+          l: 'naive' + (naiveR[n].pre ? ' (precomputed, ~40 s)' : '') });
+        if (memoR[n]) rows.push({ c: SER.memo.color, v: fmtInt(memoR[n].nodes),
+          l: 'memo + symmetry' });
+        if (grundyR[n] !== undefined) rows.push({ c: null, v: '⋆' + grundyR[n],
+          l: 'nimber (Sprague–Grundy)' });
+        D.milestones.forEach(function (ms) {
+          if (ms.n === n) rows.push({ c: SER.mile.color, v: '', l: ms.label });
+        });
+        return rows;
+      }
+      function snapN(px) { // nearest board size that has any data
+        var raw = (px - ML) / plotW * NMAX + 0.5;
+        var bestN = 0, bestD = 1e9;
+        for (var n = 1; n <= NMAX; n++) {
+          if (!dataAt(n).length) continue;
+          var d = Math.abs(n - raw);
+          if (d < bestD) { bestD = d; bestN = n; }
+        }
+        return bestN;
+      }
+      var curN = 0;
+      function showTip(n) {
+        curN = n;
+        var rows = dataAt(n);
+        if (!n || !rows.length) { hideTip(); return; }
+        cross.setAttribute('x1', x(n)); cross.setAttribute('x2', x(n));
+        cross.setAttribute('visibility', 'visible');
+        tipEl.textContent = '';
+        var head = document.createElement('div');
+        head.className = 'tt-n';
+        head.textContent = n + '×' + n + ' board';
+        tipEl.appendChild(head);
+        rows.forEach(function (r) {
+          var row = document.createElement('div');
+          row.className = 'tt-row';
+          var key = document.createElement('span');
+          key.className = 'tt-key';
+          key.style.borderTopColor = r.c || 'transparent';
+          row.appendChild(key);
+          if (r.v) {
+            var val = document.createElement('span');
+            val.className = 'tt-val';
+            val.textContent = r.v;
+            row.appendChild(val);
+          }
+          var lbl = document.createElement('span');
+          lbl.className = 'tt-lbl';
+          lbl.textContent = r.l;
+          row.appendChild(lbl);
+          tipEl.appendChild(row);
+        });
+        tipEl.style.display = 'block';
+        var cardW = cardEl.clientWidth;
+        var px = x(n) / W * cardW;
+        tipEl.style.left = Math.min(px + 14, cardW - tipEl.offsetWidth - 8) + 'px';
+        tipEl.style.top = '54px';
+      }
+      function hideTip() {
+        cross.setAttribute('visibility', 'hidden');
+        tipEl.style.display = 'none';
+        curN = 0;
+      }
+      overlay.addEventListener('pointermove', function (ev) {
+        var r = svg.getBoundingClientRect();
+        showTip(snapN((ev.clientX - r.left) / r.width * W));
+      });
+      overlay.addEventListener('pointerleave', hideTip);
+      svg.addEventListener('focus', function () { showTip(curN || snapN(x(10))); });
+      svg.addEventListener('blur', hideTip);
+      svg.addEventListener('keydown', function (ev) {
+        if (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return;
+        ev.preventDefault();
+        var dir = ev.key === 'ArrowRight' ? 1 : -1;
+        for (var n = curN + dir; n >= 1 && n <= NMAX; n += dir) {
+          if (dataAt(n).length) { showTip(n); break; }
+        }
+      });
+    }
+
+    function drawLegend() {
+      var lg = document.getElementById('growthLegend');
+      lg.textContent = '';
+      [SER.memo, SER.naive, SER.mile].forEach(function (s, i) {
+        var key = document.createElement('span');
+        key.className = 'key';
+        var mark = document.createElement('span');
+        if (i < 2) {
+          mark.style.cssText = 'width:16px;border-top:3px solid ' + s.color +
+            ';display:inline-block;transform:translateY(-2px)';
+        } else {
+          mark.style.cssText = 'width:9px;height:9px;background:' + s.color +
+            ';display:inline-block;transform:rotate(45deg)';
+        }
+        key.appendChild(mark);
+        key.appendChild(document.createTextNode(' ' + s.label));
+        lg.appendChild(key);
+      });
+    }
+
+    function drawTiles() {
+      var wrap = document.getElementById('growthTiles');
+      wrap.textContent = '';
+      if (!memoR[10]) return;
+      var st = memoR[10].stats;
+      var tiles = [
+        ['Positions expanded — 10×10', fmtInt(memoR[10].nodes),
+          'naive needs ' + fmtInt(naiveR[10].nodes) + ' ⇒ ×' +
+          Math.round(naiveR[10].nodes / memoR[10].nodes) + ' saved by memo + symmetry'],
+        ['Moves explored — 10×10', fmtInt(st.edges),
+          fmtInt(st.tried) + ' tried incl. terminals and cutoffs'],
+        ['Transposition hits — 10×10', fmtInt(st.rawHits + st.canonHits),
+          fmtInt(st.rawHits) + ' by move order · ' + fmtInt(st.canonHits) +
+          ' only via the 8 symmetries'],
+        ['Avg cutoff position', (st.winTriedSum / st.winNodes).toFixed(2),
+          'moves tried at winning nodes before one works — the forcing order at work'],
+        ['Each +2 rows costs', '×' + Math.round(memoR[10].nodes / memoR[8].nodes),
+          ['4→6 ×' + (memoR[6].nodes / memoR[4].nodes).toFixed(1),
+           '6→8 ×' + (memoR[8].nodes / memoR[6].nodes).toFixed(1),
+           '8→10 ×' + (memoR[10].nodes / memoR[8].nodes).toFixed(0)
+          ].join(' · ') + ' — the factor itself grows']
+      ];
+      tiles.forEach(function (t) {
+        var d = document.createElement('div');
+        d.className = 'tile';
+        ['tlabel', 'tvalue', 'tsub'].forEach(function (cls, i) {
+          var s = document.createElement('div');
+          s.className = cls;
+          s.textContent = t[i];
+          d.appendChild(s);
+        });
+        wrap.appendChild(d);
+      });
+    }
+
+    function drawTable() {
+      var det = document.getElementById('growthTable');
+      var old = det.querySelector('table');
+      if (old) old.remove();
+      var tbl = document.createElement('table');
+      var tr = document.createElement('tr');
+      ['board', 'first player', 'nimber', 'naive nodes', 'memo nodes', 'saving',
+       'moves explored', 'TT hits (order / sym)', 'avg cutoff', 'time'].forEach(function (h) {
+        var th = document.createElement('th');
+        th.textContent = h;
+        tr.appendChild(th);
+      });
+      tbl.appendChild(tr);
+      function td(row, txt, dim) {
+        var c = document.createElement('td');
+        c.textContent = txt;
+        if (dim) c.className = 'dim';
+        row.appendChild(c);
+      }
+      for (var n = 1; n <= 10; n++) {
+        if (!memoR[n] && !naiveR[n]) continue;
+        var r = document.createElement('tr');
+        td(r, n + '×' + n);
+        td(r, memoR[n] ? (memoR[n].wins ? 'wins' : 'loses') : '—');
+        td(r, grundyR[n] !== undefined ? '⋆' + grundyR[n] : '—');
+        td(r, naiveR[n] ? fmtInt(naiveR[n].nodes) + (naiveR[n].pre ? ' *' : '') : '—');
+        td(r, memoR[n] ? fmtInt(memoR[n].nodes) : '—');
+        td(r, memoR[n] && naiveR[n] ?
+          '×' + (naiveR[n].nodes / memoR[n].nodes).toFixed(1) : '—');
+        td(r, memoR[n] ? fmtInt(memoR[n].stats.edges) : '—');
+        td(r, memoR[n] ? fmtInt(memoR[n].stats.rawHits) + ' / ' +
+          fmtInt(memoR[n].stats.canonHits) : '—');
+        td(r, memoR[n] && memoR[n].stats.winNodes ?
+          (memoR[n].stats.winTriedSum / memoR[n].stats.winNodes).toFixed(2) : '—');
+        td(r, memoR[n] ? (memoR[n].ms >= 100 ? (memoR[n].ms / 1000).toFixed(1) + ' s'
+          : memoR[n].ms + ' ms') : '—', true);
+        tbl.appendChild(r);
+      }
+      D.milestones.forEach(function (ms) {
+        var r = document.createElement('tr');
+        r.className = 'milestone';
+        td(r, ms.n + '×' + ms.n);
+        var c = document.createElement('td');
+        c.colSpan = 9;
+        c.style.textAlign = 'left';
+        c.textContent = 'Rust solver: ' + ms.label;
+        r.appendChild(c);
+        tbl.appendChild(r);
+      });
+      var note = det.querySelector('p') || det.appendChild(document.createElement('p'));
+      note.className = 'statnote';
+      note.textContent = '* precomputed with this same engine (deterministic, ~40 s live). ' +
+        'Nodes = distinct positions expanded; TT hits split: found under the same ' +
+        'available-square mask vs found only after folding the 8 board symmetries.';
+      det.insertBefore(tbl, note);
+    }
+
+    function renderAll() { drawLegend(); drawChart(); drawTiles(); drawTable(); }
+
+    /* ---- the measurement runner ---- */
+    function run() {
+      if (ran) return;
+      ran = true;
+      runBtn.disabled = true;
+      var steps = [];
+      for (var n = 1; n <= 10; n++) {
+        (function (n) {
+          if (n <= 9) steps.push(['naive ' + n + '×' + n, function () {
+            var C = freshCore(), q = new C.Queens(n);
+            naiveR[n] = C.naiveCount(q, 0n);
+          }]);
+          steps.push(['search ' + n + '×' + n, function () {
+            var C = freshCore(), q = new C.Queens(n);
+            var s = new C.StatsSolver(q);
+            var t0 = Date.now();
+            var wins = s.wins(0n);
+            memoR[n] = { nodes: s.nodes, ms: Date.now() - t0, wins: wins, stats: s.stats };
+          }]);
+          if (n <= 9) steps.push(['nimber ' + n + '×' + n, function () {
+            var C = freshCore(), q = new C.Queens(n);
+            grundyR[n] = new C.Grundy(q).nimber();
+          }]);
+        })(n);
+      }
+      var i = 0;
+      (function next() {
+        if (i >= steps.length) {
+          progressEl.textContent = 'done — the 10×10 solve is the slow one; ' +
+            'everything was measured in this page just now.';
+          renderAll();
+          return;
+        }
+        progressEl.textContent = 'measuring: ' + steps[i][0] + '…';
+        setTimeout(function () {
+          steps[i][1]();
+          i++;
+          if (i % 3 === 0 || i >= steps.length) renderAll();
+          next();
+        }, 16);
+      })();
+    }
+    runBtn.addEventListener('click', run);
+    renderAll();
+  })();
+
+  /* ---------------- scene 4: tactic contributions ---------------- */
+  (function () {
+    var ladderEl = document.getElementById('ladderChart');
+    if (!ladderEl) return;
+    var BLUE = '#1f97d4'; // validated chart palette (see scene 3)
+    var D = QueensData;
+    var A = D.ablation;
+
+    /* shared tooltip helpers (title + rows of {v, l}) */
+    function fillTip(tipEl, title, rows) {
+      tipEl.textContent = '';
+      var head = document.createElement('div');
+      head.className = 'tt-n';
+      head.textContent = title;
+      tipEl.appendChild(head);
+      rows.forEach(function (r) {
+        var row = document.createElement('div');
+        row.className = 'tt-row';
+        if (r.v) {
+          var val = document.createElement('span');
+          val.className = 'tt-val';
+          val.textContent = r.v;
+          row.appendChild(val);
+        }
+        var lbl = document.createElement('span');
+        lbl.className = 'tt-lbl';
+        lbl.textContent = r.l;
+        row.appendChild(lbl);
+        tipEl.appendChild(row);
+      });
+    }
+    function placeTip(tipEl, cardEl, svgW, px, topPx) {
+      tipEl.style.display = 'block';
+      var cardW = cardEl.clientWidth;
+      var left = px / svgW * cardW;
+      tipEl.style.left = Math.min(left + 14, cardW - tipEl.offsetWidth - 8) + 'px';
+      tipEl.style.top = topPx + 'px';
+    }
+
+    /* ---- the ablation ladder ---- */
+    var ladderTip = document.getElementById('ladderTip');
+    var ladderCard = document.getElementById('ladderCard');
+    function drawLadder(n) {
+      clear(ladderEl);
+      var rows = A.rungs.map(function (r) { return { r: r, v: r.nodes[n] }; });
+      rows.push({ r: A.noCutoff, v: A.noCutoff.nodes[n], ref: true });
+      var W = 860, RH = 46, LX = 205, RX = 26, MT = 6, XB = 34;
+      var H = MT + rows.length * RH + XB;
+      var plotW = W - LX - RX, DEC = 8; // fixed 1..10^8 across n: rungs move, scale doesn't
+      var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img',
+        'aria-label': 'positions expanded per tactic configuration, log scale' });
+      ladderEl.appendChild(svg);
+      function x(v) { return LX + Math.log(Math.max(v, 1)) / Math.LN10 / DEC * plotW; }
+      var SUP = { 2: '²', 4: '⁴', 6: '⁶', 8: '⁸' };
+      for (var d = 0; d <= DEC; d++) {
+        var gx = LX + d / DEC * plotW;
+        add(svg, 'line', { x1: gx, y1: MT, x2: gx, y2: H - XB, stroke: COL.grid, 'stroke-width': 1 });
+        if (d % 2 === 0) {
+          add(svg, 'text', { x: gx, y: H - XB + 16, 'text-anchor': 'middle', fill: COL.faint,
+            'font-size': 11, 'font-family': 'monospace' }, d === 0 ? '1' : '10' + SUP[d]);
+        }
+      }
+      add(svg, 'text', { x: LX + plotW / 2, y: H - 3, 'text-anchor': 'middle',
+        fill: COL.faint, 'font-size': 11 }, 'positions expanded (' + n + '×' + n + ' board)');
+      var pts = [];
+      rows.forEach(function (row, i) {
+        var cy = MT + i * RH + RH / 2;
+        if (row.ref) { // divider above the remove-the-cutoff reference row
+          add(svg, 'line', { x1: 8, y1: cy - RH / 2, x2: W - RX, y2: cy - RH / 2,
+            stroke: COL.grid, 'stroke-width': 1 });
+        }
+        add(svg, 'text', { x: 8, y: cy + 4, fill: COL.dim, 'font-size': 12.5 }, row.r.name);
+        var cx = x(row.v);
+        // dotted drop-connector from the previous rung + its ×factor
+        if (i > 0 && !row.ref) {
+          var prev = pts[i - 1];
+          add(svg, 'line', { x1: prev[0], y1: prev[1], x2: cx, y2: cy, stroke: COL.axis,
+            'stroke-width': 1, 'stroke-dasharray': '3 4' });
+          add(svg, 'text', { x: (prev[0] + cx) / 2 - 8, y: (prev[1] + cy) / 2 + 4,
+            'text-anchor': 'end', fill: COL.dim, 'font-size': 12, 'font-weight': 600 },
+            '×' + (pts[i - 1][2] / row.v < 10
+              ? (pts[i - 1][2] / row.v).toFixed(1) : Math.round(pts[i - 1][2] / row.v)));
+        }
+        add(svg, 'circle', { cx: cx, cy: cy, r: 5.5, fill: row.ref ? COL.faint : BLUE,
+          stroke: COL.cellbg, 'stroke-width': 2 });
+        add(svg, 'text', { x: cx + 11, y: cy + 4, fill: COL.fg, 'font-size': 12 },
+          fmtInt(row.v) + (row.ref ? '  (×' + (row.v / rows[rows.length - 2].v).toFixed(1) +
+            ' more than the full stack)' : ''));
+        pts.push([cx, cy, row.v]);
+        // full-row hover band
+        var band = add(svg, 'rect', { x: 0, y: cy - RH / 2, width: W, height: RH,
+          fill: 'transparent' });
+        band.addEventListener('pointermove', function () {
+          var tiprows = [{ v: fmtInt(row.v), l: 'positions expanded' }];
+          if (i > 0 && !row.ref) {
+            tiprows.push({ v: '×' + (pts[i - 1][2] / row.v).toFixed(1),
+              l: 'fewer than the rung above — this tactic’s contribution here' });
+          }
+          tiprows.push({ l: row.r.what });
+          fillTip(ladderTip, row.r.name + ' — ' + n + '×' + n, tiprows);
+          placeTip(ladderTip, ladderCard, W, Math.min(cx, W - 340), 46 + i * 40);
+        });
+        band.addEventListener('pointerleave', function () { ladderTip.style.display = 'none'; });
+      });
+    }
+    var sizes = sizeButtons(document.getElementById('tacticsSizes'), A.ns,
+      function (n) { sizes.setActive(n); drawLadder(n); });
+    sizes.setActive(8);
+    drawLadder(8);
+
+    /* ---- the n=16 production lineage ---- */
+    var lineageTip = document.getElementById('lineageTip');
+    var lineageCard = document.getElementById('lineageCard');
+    (function drawLineage() {
+      var L = D.lineage16;
+      var W = 860, LX = 56, RX = 14;
+      var P1 = { top: 18, h: 140 }, GAP = 36, P2 = { top: 18 + 140 + GAP, h: 140 }, XB = 30;
+      var H = P2.top + P2.h + XB;
+      var plotW = W - LX - RX;
+      var lineageEl = document.getElementById('lineageChart');
+      clear(lineageEl);
+      var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, tabindex: 0, role: 'img',
+        'aria-label': 'n=16 wall clock and nodes per landed tactic, log scale' });
+      lineageEl.appendChild(svg);
+      function x(i) { return LX + (i + 0.5) * plotW / L.length; }
+      var panels = [
+        { p: P1, title: 'wall-clock seconds', lo: 1, hi: 3.6,
+          val: function (m) { return m.wall; },
+          fmt: function (v) { return v >= 100 ? fmtInt(Math.round(v)) + ' s' : v + ' s'; },
+          grid: [[1, '10'], [2, '100'], [3, '1000']] },
+        { p: P2, title: 'positions searched', lo: 8.1, hi: 10.1,
+          val: function (m) { return m.nodes; },
+          fmt: function (v) { return (v / 1e9).toFixed(2).replace(/0$/, '') + 'B'; },
+          grid: [[9, '1B'], [10, '10B']] },
+      ];
+      panels.forEach(function (pn) {
+        function y(v) {
+          var lg = Math.log(v) / Math.LN10;
+          return pn.p.top + pn.p.h - (lg - pn.lo) / (pn.hi - pn.lo) * pn.p.h;
+        }
+        pn.y = y;
+        pn.grid.forEach(function (g) {
+          var gy = y(Math.pow(10, g[0]));
+          add(svg, 'line', { x1: LX, y1: gy, x2: W - RX, y2: gy, stroke: COL.grid, 'stroke-width': 1 });
+          add(svg, 'text', { x: LX - 8, y: gy + 4, 'text-anchor': 'end', fill: COL.faint,
+            'font-size': 11, 'font-family': 'monospace' }, g[1]);
+        });
+        add(svg, 'text', { x: LX, y: pn.p.top - 7, 'text-anchor': 'start', fill: COL.faint,
+          'font-size': 11.5 }, pn.title);
+        add(svg, 'polyline', {
+          points: L.map(function (m, i) { return x(i) + ',' + y(pn.val(m)); }).join(' '),
+          fill: 'none', stroke: BLUE, 'stroke-width': 2,
+          'stroke-linejoin': 'round', 'stroke-linecap': 'round'
+        });
+        L.forEach(function (m, i) {
+          add(svg, 'circle', { cx: x(i), cy: y(pn.val(m)), r: 4.5, fill: BLUE,
+            stroke: COL.cellbg, 'stroke-width': 2 });
+        });
+        // direct labels: endpoints only (first below its dot, last above its dot
+        // — the curve falls left-to-right, so both offsets point into open space)
+        add(svg, 'text', { x: x(0) + 9, y: y(pn.val(L[0])) + 16, fill: COL.dim,
+          'font-size': 11.5 }, pn.fmt(pn.val(L[0])));
+        add(svg, 'text', { x: x(L.length - 1), y: y(pn.val(L[L.length - 1])) - 10,
+          'text-anchor': 'end', fill: COL.dim, 'font-size': 11.5 },
+          pn.fmt(pn.val(L[L.length - 1])));
+      });
+      for (var i = 0; i < L.length; i++) {
+        add(svg, 'text', { x: x(i), y: H - 12, 'text-anchor': 'middle', fill: COL.faint,
+          'font-size': 11, 'font-family': 'monospace' }, String(i + 1));
+      }
+      add(svg, 'text', { x: LX + plotW / 2, y: H - 0.5, 'text-anchor': 'middle',
+        fill: COL.faint, 'font-size': 11 }, 'tactic, in the order it landed (hover / table below)');
+      var cross = add(svg, 'line', { x1: 0, y1: P1.top, x2: 0, y2: P2.top + P2.h,
+        stroke: COL.axis, 'stroke-width': 1, visibility: 'hidden' });
+      var overlay = add(svg, 'rect', { x: LX, y: P1.top, width: plotW,
+        height: P2.top + P2.h - P1.top, fill: 'transparent' });
+      overlay.style.cursor = 'crosshair';
+      var curI = -1;
+      function showAt(i) {
+        curI = i;
+        var m = L[i];
+        cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i));
+        cross.setAttribute('visibility', 'visible');
+        fillTip(lineageTip, (i + 1) + ' · ' + m.tag, [
+          { v: panels[0].fmt(m.wall), l: 'wall clock' },
+          { v: panels[1].fmt(m.nodes), l: 'positions searched' },
+          { l: m.what }
+        ]);
+        placeTip(lineageTip, lineageCard, W, Math.min(x(i), W - 340), 50);
+      }
+      function hide() {
+        cross.setAttribute('visibility', 'hidden');
+        lineageTip.style.display = 'none';
+        curI = -1;
+      }
+      overlay.addEventListener('pointermove', function (ev) {
+        var r = svg.getBoundingClientRect();
+        var px = (ev.clientX - r.left) / r.width * W;
+        var i = Math.max(0, Math.min(L.length - 1,
+          Math.round((px - LX) / plotW * L.length - 0.5)));
+        showAt(i);
+      });
+      overlay.addEventListener('pointerleave', hide);
+      svg.addEventListener('focus', function () { showAt(curI < 0 ? 0 : curI); });
+      svg.addEventListener('blur', hide);
+      svg.addEventListener('keydown', function (ev) {
+        if (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return;
+        ev.preventDefault();
+        var j = curI + (ev.key === 'ArrowRight' ? 1 : -1);
+        if (j >= 0 && j < L.length) showAt(j);
+      });
+      // table view
+      var det = document.getElementById('tacticsTable');
+      var tbl = document.createElement('table');
+      var tr = document.createElement('tr');
+      ['#', 'tactic', 'what it does', 'wall', 'nodes'].forEach(function (h) {
+        var th = document.createElement('th');
+        th.textContent = h;
+        tr.appendChild(th);
+      });
+      tbl.appendChild(tr);
+      L.forEach(function (m, i) {
+        var r = document.createElement('tr');
+        [String(i + 1), m.tag, m.what, panels[0].fmt(m.wall), panels[1].fmt(m.nodes)]
+          .forEach(function (txt, ci) {
+            var c = document.createElement('td');
+            c.textContent = txt;
+            if (ci === 1 || ci === 2) c.style.textAlign = 'left';
+            r.appendChild(c);
+          });
+        tbl.appendChild(r);
+      });
+      det.appendChild(tbl);
+    })();
+  })();
+})();
+</script>
+</body>
+</html>

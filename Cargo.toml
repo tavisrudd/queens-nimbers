@@ -1,0 +1,40 @@
+[package]
+name = "queens-nimbers"
+version = "0.1.0"
+edition = "2021"
+description = "Solver for the Non-Attacking Queens game (Node Kayles on the n-queens graph): win/loss for n = 18 and Sprague-Grundy nimbers extending OEIS A344227"
+license = "MIT"
+repository = "https://github.com/tavisrudd/queens-nimbers"
+keywords = ["combinatorial-game-theory", "node-kayles", "sprague-grundy", "n-queens", "oeis"]
+categories = ["algorithms", "science"]
+
+[lib]
+name = "queens_nimbers"
+path = "src/lib.rs"
+
+[[bin]]
+name = "queens"
+path = "src/bin/queens.rs"
+
+# Whole-program inlining plus a single codegen unit; `.cargo/config.toml` adds
+# `-C target-cpu=native` so the bit primitives compile to POPCNT / BMI.
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+
+# Same codegen as release, with debug symbols for `perf`.
+[profile.profiling]
+inherits = "release"
+debug = true
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+libc = "0.2"
+rayon = "1.12.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+signal-hook = "0.3"
+terminal_size = "0.4"
+zstd = "0.13"
