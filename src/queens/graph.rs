@@ -71,7 +71,7 @@ fn hash_colours(verts: &[u32], colour: &[u64]) -> u64 {
 /// per-call zeroing -- **zero heap allocation in the hot loop**. Boxed so the buffers
 /// live on the heap once per thread, not on every call's stack.
 ///
-/// `#[repr(C, align(64))]`: hot-struct discipline (CLAUDE.md). The `[u64; MAXV]` colour
+/// `#[repr(C, align(64))]`: hot-struct discipline. The `[u64; MAXV]` colour
 /// arrays are 2048 B (a multiple of 64), so a 64-aligned struct start makes every one of
 /// them cache-line-aligned -- the contiguous `col`/`nxt`/`mc` colour map (which LLVM
 /// auto-vectorises to AVX-512) then loads/stores on line boundaries, no split loads.
@@ -943,9 +943,9 @@ impl Queens {
             // Production: the `HIST = false` instantiation emits *no* component-size
             // tally at all -- not a per-component branch but a compile-time-eliminated
             // path -- so the hot loop's I-cache footprint is unchanged. The gate is a
-            // const generic resolved at the call site, the way the project keeps
-            // measurement toggles out of latency-bound loops (see the env-var rule in
-            // CLAUDE.md). The measurement entry instantiates `HIST = true` instead.
+            // const generic resolved at the call site, which is how measurement
+            // toggles are kept out of latency-bound loops here. The measurement entry
+            // instantiates `HIST = true` instead.
             // `CACHE = true` keeps the per-thread component-canon cache (#19).
             self.iso_key_fast_in::<false, true>(mask, &mut g, &mut [])
         })

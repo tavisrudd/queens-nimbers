@@ -1,0 +1,38 @@
+{
+  "title": "queens-nimbers: a solver and verification package for the Non-Attacking Queens game",
+  "description": "A solver for the adversarial Non-Attacking Queens game, which is Node Kayles on the n-queens graph, together with the verification resources behind two results: the 18x18 game is a first-player win, established by two independently configured proving runs that agree on the verdict, the winning opening, and the full 15-ply principal variation; and the Sprague-Grundy values G(14)=0, G(15)=1, G(16)=0, G(17)=2, which extend OEIS A344227 beyond its catalogued range and refute the eventual 1,0-oscillation conjecture recorded there. The package contains the solver ladder from a memo-less negamax ground truth up to the production kernel, the getK dense leaf evaluator, a sorry-free Lean 4 development of the leaf evaluator's recurrence and Grundy semantics, the differential and lineage test gates, the frozen run configurations, and the OEIS extension package with its b-file.",
+  "upload_type": "software",
+  "access_right": "open",
+  "license": "MIT",
+  "creators": [
+    {
+      "name": "Rudd, Tavis"
+    }
+  ],
+  "keywords": [
+    "combinatorial game theory",
+    "Node Kayles",
+    "Sprague-Grundy theory",
+    "nimbers",
+    "n-queens",
+    "impartial games",
+    "game solving",
+    "Lean 4",
+    "formal verification",
+    "OEIS A344227"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://oeis.org/A344227",
+      "relation": "isSupplementTo",
+      "resource_type": "dataset",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://github.com/tavisrudd/queens-nimbers",
+      "relation": "isSupplementTo",
+      "resource_type": "software",
+      "scheme": "url"
+    }
+  ]
+}

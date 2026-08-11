@@ -152,7 +152,7 @@ const HMIX: [(u64, u64); 16] = {
 
 /// Levels below each root child that fan out across rayon workers (the root itself fans
 /// over the distinct first moves). Win/loss children short-circuit via `any`, so deeper
-/// fan-out is speculative; two levels saturate the box on the boards this engine targets.
+/// fan-out is speculative; two levels saturate the machine on the boards this engine targets.
 const SUM_PAR_LEVELS: u32 = 2;
 
 /// Move-buffer capacity: a node can have up to `MAX_N²` available squares.
@@ -203,7 +203,7 @@ pub struct NimberSum {
     /// (D4 canon + hash + probe + put). With `bk = 20`, pc==21's children are all
     /// boolean leaves (bounded recompute, the skip18 safety argument verbatim); deeper
     /// bands trade bounded re-expansion into the leaf floor for TT pressure relief —
-    /// the lever that made the giant n=18 root converge on the 26 GB box.
+    /// the lever that made the giant n=18 root converge on the 26 GB machine.
     skip: (u32, u32),
 }
 

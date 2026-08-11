@@ -1,5 +1,4 @@
-//! `Incremental` -- the A3 inner-loop kernel (handoff
-//! `2026-06-16-queens-inner-loop-rewrite.md`, Step 3). Instead of recomputing the
+//! `Incremental` -- the A3 inner-loop kernel. Instead of recomputing the
 //! D4 canonical key per node by scattering set bits through a permutation
 //! ([`Queens::canon`], the ~250x "fat"), it **carries the 8 dihedral orientations
 //! of `available` live down the DFS stack**. Placing a queen on `sq` updates each
@@ -39,13 +38,13 @@ pub(crate) fn orient_of(q: &Queens, available: Bits) -> [Bits; 8] {
 /// images, same `Bits` order), so the TT merges identically. Serial early-out fold
 /// -- the A3-validated form (beats branchless `lex_lt` and tree reductions; most
 /// image pairs differ in word 0, so the compare exits after one limb).
-// NOTE (2026-06-18, session --6): an AVX-512 gather + reduce-min-cascade lex_min8 was
+// NOTE (2026-06-18): an AVX-512 gather + reduce-min-cascade lex_min8 was
 // built and A/B'd on n=16 — MEASURED LOSS (CPI 1.110→1.275, M/s 41.0→37.4, −9%) despite
 // −12% instructions: the strided gathers are CPI-expensive on znver5, and even a
 // gather-free SoA variant can't beat the scalar because the scalar early-exits on word 0
 // (most orientations differ there) while any branchless all-4-limb reduction processes
 // all limbs unconditionally. Kept scalar. Don't re-attempt the cascade form.
-// RE-CONFIRMED (2026-06-21, session --19): a branch-mispredict audit found this `cand < best`
+// RE-CONFIRMED (2026-06-21): a branch-mispredict audit found this `cand < best`
 // the #1 mispredict source post-W17 (~34% of `wins_inc`'s misses; ~coin-flip). A *scalar* branchless
 // blend — `lt` mask from two `u128`-half compares (`(chi<bhi)|((chi==bhi)&(clo<blo))`), then
 // `best = blend(best,cand,lt)`, no gather — was built + A/B'd at the **default 8 GB TT**: **+2.0%

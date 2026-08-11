@@ -10,7 +10,7 @@ use std::sync::Mutex;
 
 /// Flush a worker's thread-local tally into the shared atomics ≈ once a second (at the
 /// ~M-node/s rates here). Per-node the search touches only thread-local memory -- no
-/// cross-CCX atomic on the shared `nodes` counter, which on this 2-CCX box bounces over the
+/// cross-CCX atomic on the shared `nodes` counter, which on this 2-CCX machine bounces over the
 /// Infinity Fabric and measured a ~2× throughput drag every node (mirror of the BurrStore
 /// fix, `store.rs`). The shared counters are exact again after a [`QueensTt::drain_all`].
 const FLUSH_NODES: u64 = 1 << 18;
@@ -74,7 +74,7 @@ pub struct QueensTt {
     /// Node-flush cadence (`QUEENS_FLUSH_NODES`, default [`FLUSH_NODES`]); resolved once. Lower ⇒ finer
     /// time-series resolution during the serial collapses, more atomic traffic (measurement only).
     flush_nodes: u64,
-    /// Optional distinct-position instrumentation (Chunk 1). `None` for an
+    /// Optional distinct-position instrumentation. `None` for an
     /// ordinary solve, so the production path pays only a predictable null check.
     counter: Option<Counter>,
     /// `QUEENS_TT_SEGMENT=1`: route by available-popcount into a per-pc band of the same
@@ -114,7 +114,7 @@ const TT_MIN_BAND: u64 = 64;
 /// scanned for free. Bounds `TT_MIN_BAND` from below (a band must hold ≥ one bucket).
 const TT_ASSOC_WAYS: usize = 8;
 
-/// A compact 8-byte transposition slot (Chunk 2): one `u64` packing a used flag
+/// A compact 8-byte transposition slot: one `u64` packing a used flag
 /// (bit 0), the 8-bit value (bits 1..9 -- the win/loss bit for the search, or a
 /// small Sprague-Grundy nimber for [`Nimber`]), and a 55-bit fingerprint of the
 /// canonical key (bits 9..64).
@@ -132,7 +132,7 @@ const TT_ASSOC_WAYS: usize = 8;
 /// miss, never wrong" weakens to "wrong with vanishing probability"; a fingerprint
 /// *mismatch* is still just a miss that re-searches.
 #[derive(Clone, Copy, Default)]
-#[repr(transparent)] // hot-struct discipline (CLAUDE.md #4): explicit layout = the inner `u64`.
+#[repr(transparent)] // hot-struct discipline: explicit layout = the inner `u64`.
 pub(crate) struct Slot(pub(crate) u64);
 
 // #7: lock the one-word slot — a field-add that grew it would silently double the TT footprint.
@@ -217,7 +217,7 @@ pub(crate) fn zeroed_huge_atomics(size: usize) -> Box<[AtomicU64]> {
             libc::madvise(ptr, len, libc::MADV_HUGEPAGE);
             // `MADV_HUGEPAGE` is only a hint: the kernel forms a 2 MB page lazily, and only
             // when a fully-aligned 2 MB region faults in contiguously. A multi-GB table is
-            // first-touched at *random* slots, so on this box only ~70% of it ever reaches
+            // first-touched at *random* slots, so on this hardware only ~70% of it ever reaches
             // THP -- the 4 KB remnant is ~half the dTLB misses on the hot probe (measured:
             // 17 GB RSS, 12 GB AnonHugePages). `MADV_COLLAPSE` (Linux 6.1+) forces a
             // synchronous collapse of the whole range into 2 MB pages now, allocating/
@@ -280,7 +280,7 @@ pub(crate) fn zeroed_huge_atomics(size: usize) -> Box<[AtomicU64]> {
 
 /// Resolve the `QUEENS_TT_SLOTS` exact-slot-count override once (at table
 /// construction, never per node). `Some(n)` clamps to at least 2 slots; `None` keeps
-/// the `2^bits` default. Lets a run fill all RAM via `fastrange` sizing (Chunk 2b).
+/// the `2^bits` default. Lets a run fill all RAM via `fastrange` sizing.
 fn tt_slots_override() -> Option<usize> {
     std::env::var("QUEENS_TT_SLOTS")
         .ok()
@@ -292,7 +292,7 @@ fn tt_slots_override() -> Option<usize> {
 /// available-popcount (`QUEENS_PC_HIST=1 queens solve 14 iso-window`), stored from `pc = 9`
 /// (the first non-empty popcount). The fallback when `QUEENS_TT_BANDS` is not given — good
 /// for n ≤ 14 validation; the n=16 A/B feeds real n=16 weights via the file (the shape is
-/// similar but the range extends higher). See the iso-window handoff.
+/// similar but the range extends higher).
 const N14_PUTS_FROM9: [u64; 57] = [
     4_953_830, 3_618_177, 2_931_227, 2_478_592, 1_938_913, 1_333_717, 863_474, 645_630, 628_131,
     682_025, 685_056, 589_228, 429_732, 264_266, 145_087, 84_190, 69_043, 75_378, 83_798, 83_381,
@@ -385,7 +385,7 @@ fn build_bands(counts: &[u64; TT_MAXPC], len: u64) -> (Box<[u64]>, Box<[u64]>) {
 }
 
 // --------------------------------------------------------------------------- //
-// Dumpable / reloadable image (checkpoint + resume; proposal 2026-06-15)
+// Dumpable / reloadable image (checkpoint + resume)
 // --------------------------------------------------------------------------- //
 
 /// Magic for a [`QueensTt`] image file. Bumped only if the wire layout changes.
@@ -485,8 +485,8 @@ impl QueensTt {
     /// A lockless table of `2^bits` slots (each 8 bytes; see [`Slot`]). `bits` is the
     /// memory cap knob. `QUEENS_TT_SLOTS` overrides with an exact slot **count** (any
     /// value, not just a power of two) -- resolved once here, never per node -- so a run
-    /// can fill *all* available RAM rather than the next power of two below it (Chunk 2b;
-    /// at 8 B/slot the 2^31 = 17 GB → 2^32 = 34 GB gap straddles a 26 GB box's sweet
+    /// can fill *all* available RAM rather than the next power of two below it (at
+    /// 8 B/slot the 2^31 = 17 GB → 2^32 = 34 GB gap straddles a 26 GB machine's sweet
     /// spot). Indexing is Lemire `fastrange` ([`QueensTt::index`]), which maps a hash to
     /// `[0, len)` for any `len`.
     pub fn new(bits: u32) -> Self {
@@ -825,7 +825,7 @@ impl QueensTt {
 
     /// Lemire's `fastrange`: map a 64-bit hash uniformly into `[0, len)` with a single
     /// widening multiply + shift -- the power-of-two-free replacement for `hash & mask`,
-    /// so the table can be sized to any slot count (Chunk 2b). The extra multiply is
+    /// so the table can be sized to any slot count. The extra multiply is
     /// negligible against the random-probe DRAM latency the search is bound by.
     #[inline]
     fn index(&self, route: u64) -> usize {
@@ -1334,7 +1334,7 @@ impl QueensTt {
         }
     }
 
-    /// The BuRR archive key a live `key` resolves to in *this* table (Chunk 4).
+    /// The BuRR archive key a live `key` resolves to in *this* table.
     /// A frozen [`burr::Archive`](crate::burr::Archive) is keyed by the slot
     /// identity `(index, fingerprint)` recovered from a dump (see
     /// [`archive_key_of`]); querying it during search recomputes that pair from the
@@ -1368,7 +1368,7 @@ pub fn archive_key_of(slot_index: u64, fingerprint: u64) -> u64 {
 /// Validates the header (the same hard format/hash/canon/arch/`n` checks as
 /// [`QueensTt::load_image`]) and returns it. Reads block by block, so it never
 /// materialises the whole table -- a 17 GB n=16 dump streams in ~512 KB chunks,
-/// which is what lets the freeze run on a box too small to also hold the table.
+/// which is what lets the freeze run on a machine too small to also hold the table.
 pub fn for_each_image_entry<R: Read, F: FnMut(u64, u8)>(
     r: &mut R,
     expected_n: u8,
@@ -1581,7 +1581,7 @@ mod mlp_bench {
         sweep("sorted", &routes_s, &fps_s);
     }
 
-    /// Phase-0 of the [sorted-frontier-wave proposal](../../notes/proposal-2026-06-20-sorted-frontier-wave.md):
+    /// Phase-0 of the sorted-frontier-wave question:
     /// does the single-thread ~5.7× sorted-stream ceiling (random depth-0 → sorted depth-32 from
     /// [`mlp_probe_depth_sweep`]) **survive multi-thread bandwidth contention**? Approach B (idle-core
     /// producer/consumer pipeline) needs a few hot consumer cores to stream sorted chunks at the

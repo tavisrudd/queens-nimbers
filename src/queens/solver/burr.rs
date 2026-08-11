@@ -1,6 +1,6 @@
 //! `Burr` -- the [`Incremental`](super::Incremental) A3 kernel over a
-//! [`BurrStore`](crate::queens::BurrStore) instead of a flat [`QueensTt`] (Chunk 4,
-//! "BuRR live"). Same per-node key path (the 8 dihedral orientations carried down the
+//! [`BurrStore`](crate::queens::BurrStore) instead of a flat [`QueensTt`].
+//! Same per-node key path (the 8 dihedral orientations carried down the
 //! DFS, `lex_min8` ≡ `pos_key`), same parity-aware rayon root parallelism, same
 //! odd-board O(1) theorem -- so the node count, distinct working set, and verdict are
 //! identical to `incremental`. **What changes is the table:** the store is

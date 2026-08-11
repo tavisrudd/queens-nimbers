@@ -1,13 +1,12 @@
 //! Self-pinned CPU affinity for the queens solver.
 //!
-//! Reuses the approach proven in the `sessions` TUI daemon
-//! (`~/src/sessions/src/daemon/affinity.rs`): detect performance cores by peak cpufreq,
+//! Detect performance cores by peak cpufreq,
 //! pin the search rayon pool across all allowed cores **perf-first** (deterministic 1:1
-//! placement — no scheduler migration, which this heterogeneous box is hypersensitive to),
+//! placement — no scheduler migration, which this heterogeneous machine is hypersensitive to),
 //! and confine the freeze-build pool + the watcher thread to the **efficiency** cores so
 //! housekeeping never preempts the latency-critical search on a high-clock core.
 //!
-//! On the dev box (AMD HX 370): perf logicals `{0-3,12-15}` (Zen5, ~5.16 GHz) vs efficiency
+//! On the development machine (AMD HX 370): perf logicals `{0-3,12-15}` (Zen5, ~5.16 GHz) vs efficiency
 //! `{4-11,16-23}` (Zen5c, ~3.29 GHz). `QUEENS_AFFINITY=off` disables; `=on` forces even on a
 //! homogeneous machine; default `auto` engages only when a distinct efficiency tier exists.
 //! No-op on non-Linux. Respects an inherited `taskset`/cgroup mask (we partition *within* it).
@@ -123,7 +122,7 @@ fn build_plan(n: u32) -> CorePlan {
     eff.sort_unstable();
 
     // `auto` engages only on a heterogeneous part (a distinct efficiency tier exists); a
-    // homogeneous box is left to the scheduler unless `QUEENS_AFFINITY=on` forces pinning.
+    // homogeneous machine is left to the scheduler unless `QUEENS_AFFINITY=on` forces pinning.
     if eff.is_empty() && !forced {
         return CorePlan::disabled();
     }

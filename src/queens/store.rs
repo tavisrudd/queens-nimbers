@@ -1,5 +1,5 @@
 //! `BurrStore` -- the BuRR-as-primary, log-structured transposition store for the
-//! [`Burr`](crate::queens::Burr) solver (Chunk 4, "BuRR live").
+//! [`Burr`](crate::queens::Burr) solver.
 //!
 //! The flat [`QueensTt`] holds at most `2^bits` keys at 64 bits/slot and *evicts*
 //! once full -- at n=16 it fits ~27% of the ~7.9 B distinct set, so ~26% of
@@ -21,7 +21,7 @@
 //!
 //! # Bounded memory (pre-allocated, never OOMs)
 //!
-//! Full n=16 retention does not fit this box's RAM, so the store is **capped**: a
+//! Full n=16 retention does not fit the reference workstation's RAM, so the store is **capped**: a
 //! freeze that would push resident segment bytes past `cap_limit` (or fill the
 //! pre-allocated segment table) latches `frozen_full` and *stops freezing*. The active
 //! memtable then behaves as an ordinary evicting TT -- re-expansion climbs gracefully
@@ -287,9 +287,9 @@ pub struct BurrStore {
 /// the full transposition table -- so it must not inherit `tt_bits(n)`, which sizes a
 /// *flat* TT to the whole distinct-position count. At n=16 `tt_bits` clamps to
 /// `MAX_TT_BITS` (31) ⇒ 16 GiB/buffer ⇒ **32 GiB resident after the first freeze**
-/// (`QueensTt::clear` memsets, it does not decommit) ⇒ OOM on a 26 GB box. 26
+/// (`QueensTt::clear` memsets, it does not decommit) ⇒ OOM on a 26 GB machine. 26
 /// (= 512 MiB/buffer, 1 GiB for both) is the measured-good value (the 29m23s n=16
-/// run); raise it with `QUEENS_BURR_MEM_BITS` on a larger-RAM box.
+/// run); raise it with `QUEENS_BURR_MEM_BITS` on a larger-RAM machine.
 const BURR_MEM_BITS_DEFAULT_CAP: u32 = 26;
 
 fn mem_bits_for(bits: u32) -> u32 {

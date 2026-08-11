@@ -74,7 +74,7 @@ pub trait Solver: Sync {
     /// Flush every worker's thread-local node/HLL tally into the shared totals, so
     /// [`nodes`](Self::nodes) and [`report`](Self::report) are exact. The CLI calls this once
     /// after the search (the hot loop only flushes ≈ once a second to avoid a per-node atomic
-    /// on this cross-CCX box). Default no-op for solvers that don't accumulate locally.
+    /// on this cross-CCX machine). Default no-op for solvers that don't accumulate locally.
     fn drain(&self) {}
 
     /// Per-node branching / cutoff tally, if built with [`Tt::with_branching`]
@@ -147,7 +147,7 @@ pub trait Solver: Sync {
 
 /// Which canonical key the search uses per node. `D4` is the production key
 /// (`pos_key`, the dihedral-canonical `available` mask). `GraphIr`/`GraphCanon` are
-/// the **graph-isomorphism** keys (session-6 lever #7) -- they merge ~3.4× more
+/// the **graph-isomorphism** keys -- they merge ~3.4× more
 /// positions (every isomorphic available-graph), but cost ~µs/node vs `pos_key`'s
 /// ~ns, so this is a measurement/spike toggle (`QUEENS_KEY=ir|canon`), not yet the
 /// default. Only meaningful for the canonical solvers (`canon == true`).

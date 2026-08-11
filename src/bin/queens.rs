@@ -34,7 +34,7 @@ const A344227: [u8; 14] = [0, 1, 1, 2, 1, 3, 1, 2, 3, 1, 0, 1, 0, 1];
 /// transposition-table working set -- for the empty n×n board, indexed by n.
 /// Even boards are searched; odd boards are O(1) (centre + 180° mirror, no
 /// search) so 0. Exact (hash set) for n ≤ 12, HyperLogLog for n=14, and
-/// extrapolated for n=16 (Chunk 1: growth accelerates ~11×→46× per step,
+/// extrapolated for n=16 (growth accelerates ~11×→46× per step,
 /// central estimate ~9.2e9). Re-measure any entry with `queens count <n> --exact`
 /// (or `--parallel` for the big ones). These size the table -- see `tt_bits`.
 ///
@@ -58,7 +58,7 @@ const DISTINCT_POSITIONS: [u64; 17] = [
     0,             // n=13 (odd)
     49_419_639,    // n=14 (HyperLogLog p=18, ±0.2%)
     0,             // n=15 (odd)
-    9_200_000_000, // n=16 (extrapolated; exceeds any single-box table)
+    9_200_000_000, // n=16 (extrapolated; exceeds any single-machine table)
 ];
 
 /// Upper bound on the transposition-table size: `2^30` slots = **8 GiB** at the
@@ -119,7 +119,7 @@ enum Cmd {
         #[arg(default_value_t = 8, value_parser = clap::value_parser!(u32).range(1..=MAX_N as i64))]
         n: u32,
         /// Solver to use (`iso-window`, the default, is the fastest — n=16 in ~2m44s
-        /// on this box: iso-flat's kernel + a complete dense W8 table that resolves
+        /// on a 24-thread Zen 5 workstation: iso-flat's kernel + a complete dense W8 table that resolves
         /// 8-vertex tails without re-expansion, over a huge-page-collapsed flat TT).
         ///
         /// `naive`→`memo`→`symmetry`→`parallel` is a speed ladder, each step adding
@@ -211,7 +211,7 @@ enum Cmd {
         psym: bool,
         /// Measure the **per-root working set + cross-root transposition rate**: search
         /// each symmetry-distinct first move with a cold exact-counting TT and report
-        /// (A) per-root distinct sizes — does the biggest root fit a single-box TT? —
+        /// (A) per-root distinct sizes — does the biggest root fit a single-machine TT? —
         /// and (B) how many roots touch each position (Σ-per-root ÷ union = the
         /// cross-root reuse a staged freeze-after-each-root cascade must preserve).
         /// Sizes the Chunk-4 staged-cascade lever. Even n only; does its own searches.
@@ -246,7 +246,7 @@ enum Cmd {
         #[arg(default_value_t = 1, value_parser = clap::value_parser!(u32).range(1..=2))]
         player: u32,
     },
-    /// Freeze a dumped TT image into an immutable **BuRR archive** (Chunk 4): a
+    /// Freeze a dumped TT image into an immutable **BuRR archive**: a
     /// ribbon-retrieval layer storing each solved position's win/loss plus a
     /// membership fingerprint at ~`1.1*(1+fp_bits)` bits/key, with no eviction.
     /// Reads the `.zst` checkpoint `solve --checkpoint` writes.
@@ -1422,7 +1422,7 @@ fn read_checkpoint(path: &Path, n: u32) -> io::Result<QueensTt> {
 }
 
 // --------------------------------------------------------------------------- //
-// Chunk 4: freeze a dumped TT into an immutable BuRR archive, and verify it.
+// Freeze a dumped TT into an immutable BuRR archive, and verify it.
 // --------------------------------------------------------------------------- //
 
 /// Stream a (zstd) TT image, invoking `f(archive_key, val)` per solved position.
@@ -2183,7 +2183,7 @@ fn branching_report(solver: &dyn Solver, distinct: f64) {
 /// full set that root would touch in isolation:
 ///   (A) the largest cold per-root set is root-0's live-TT requirement under staging
 ///       (the archive is empty when the first root runs) -- if it overflows a single
-///       box's TT, staging cannot stop *its* thrash.
+///       machine's TT, staging cannot stop *its* thrash.
 ///   (B) Sigma(per-root) / |union| is the cross-root reuse factor: the work a staged
 ///       solve would re-do per root *without* the archive = exactly what the archive
 ///       must hold to pay for its query cost. ~1.0 => roots barely overlap (staging
@@ -2206,7 +2206,7 @@ fn roots_report(q: &Queens, hll_p: u32) {
     // Cap the per-root TT at 2^26 (512 MB) -- ample for one root in isolation, and the
     // exact set dedups regardless of TT size, so a smaller table only trades a little
     // eviction-recompute for a far smaller resident footprint per concurrent search.
-    // `QUEENS_ROOTS_TT_BITS` lowers it further when the box is memory-tight at n=14/16.
+    // `QUEENS_ROOTS_TT_BITS` lowers it further when the machine is memory-tight at n=14/16.
     let bits = std::env::var("QUEENS_ROOTS_TT_BITS")
         .ok()
         .and_then(|s| s.parse::<u32>().ok())
@@ -2214,8 +2214,8 @@ fn roots_report(q: &Queens, hll_p: u32) {
         .unwrap_or_else(|| tt_bits(q.n).min(26));
     let nroots = firsts.len();
     // Bound concurrency: each in-flight cold search holds a full exact map (32 B/key),
-    // so 28-at-once OOMs the box. A small pool keeps peak RSS to ~`THREADS` maps.
-    // `QUEENS_ROOTS_THREADS` lowers it when the box is memory-tight (n=14/16 exact maps).
+    // so 28-at-once OOMs the machine. A small pool keeps peak RSS to ~`THREADS` maps.
+    // `QUEENS_ROOTS_THREADS` lowers it when the machine is memory-tight (n=14/16 exact maps).
     let threads: usize = std::env::var("QUEENS_ROOTS_THREADS")
         .ok()
         .and_then(|s| s.parse::<usize>().ok())
@@ -2809,7 +2809,7 @@ fn print_pc_hist(hist: &[u64]) {
     }
     // QUEENS_PC_HIST_OUT=<path>: dump the raw per-pc counts (one per line, pc = line index),
     // the band-weight file a follow-up `QUEENS_TT_SEGMENT=1 QUEENS_TT_BANDS=<path>` run reads.
-    // Lets a single clean-box pass measure n=16 weights then A/B the segmented TT, no rebuild.
+    // Lets a single clean-machine pass measure n=16 weights then A/B the segmented TT, no rebuild.
     if let Ok(path) = std::env::var("QUEENS_PC_HIST_OUT") {
         let body: String = hist.iter().map(|c| format!("{c}\n")).collect();
         match std::fs::write(&path, body) {
@@ -3199,7 +3199,7 @@ fn comps_canon_census(q: &Queens, ws: &[(Bits, u8)]) {
 }
 
 /// Node-Kayles structural-reduction incidence over the working set, per available-popcount —
-/// the gate for the literature's twin/module shortcut (research-2026-06-19-w12-w13-litsearch).
+/// the gate for the literature's twin/module shortcut.
 /// For each `pc` in the W_K band (9..=13) reports the fraction of distinct positions with a
 /// **universal vertex** (a move ⇒ instant win, resolvable in O(K) without the K-move `pext`
 /// sweep) and with a **twin pair** (equivalent moves the sweep could dedup). If these are

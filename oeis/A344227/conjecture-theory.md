@@ -1,12 +1,12 @@
 # A344227 (Non-Attacking Queens / Node-Kayles on the queen graph) — conjecture theory
 
 **Date**: 2026-07-02
-**Scope**: THEORY-ONLY. No solver runs, no builds. Read-only research + this note.
-**Author context**: A344227 is known through n=17 — `G(17) = 2`, computed on the box (heap-sum engine). `G(18)`'s exact value is still open.
 
-This note formalizes the open conjectures around A344227, sweeps the literature, offers a
-rigorous structural theory of the even/odd split (with proof status marked precisely),
-records `G(17) = 2`, predicts the still-open `G(18)`, and lists cheap deferred experiments to discriminate the remaining hypotheses.
+A344227 is known through `n = 17`, where `G(17) = 2` was computed with the heap-sum engine in
+this repository; the exact value of `G(18)` is open. This note states the conjectures around the
+sequence, surveys the literature, gives a structural theory of the even/odd split with the proof
+status of each step marked, and lists the experiments that would discriminate the remaining
+hypotheses.
 
 ---
 
@@ -19,25 +19,24 @@ A344227 = Sprague-Grundy (nimber) values `G(n)` of Node-Kayles on the n×n queen
 |------|---|---|---|---|---|---|---|---|---|---|----|----|----|----|----|----|----|----|----|
 | G(n) | 0 | 1 | 1 | 2 | 1 | 3 | 1 | 2 | 3 | 1 | 0  | 1  | 0  | 1  | 0  | 1  | 0  | 2  | ≠0 |
 
-- **n=0..13**: the OEIS-listed terms `0,1,1,2,1,3,1,2,3,1,0,1,0,1` (verified against the
-  `InnovativeInventor/node-kayles` repo output this session; that repo — Max Fan — is the
-  computation behind the sequence and reached n=13, flagging n=10..13 `0,1,0,1` as new).
-- **n=14,15,16**: `G = 0, 1, 0` — NEW, this project (heap-sum engine, 2026-07-01), multi-config
-  validated; independently equal to the production win/loss verdicts.
+- **n=0..13**: the OEIS-listed terms `0,1,1,2,1,3,1,2,3,1,0,1,0,1`, cross-checked against the
+  output of the `InnovativeInventor/node-kayles` calculator (Max Fan), the computation behind the
+  sequence, which reached n=13 and flagged n=10..13 `0,1,0,1` as new.
+- **n=14,15,16**: `G = 0, 1, 0` — new terms, computed with the heap-sum engine and validated
+  under more than one configuration; independently equal to the boolean win/loss verdicts.
 - **n=17**: `G = 2` — **verified** (heap-sum engine: k=0 WIN, k=1 WIN, k=2 LOSS). First odd value
   `> 1` since G(7)=2; refutes the conjectured odd→1 continuation.
-- **n=18**: `G ≠ 0` — this project's n=18 FIRST-player win (witness opening **I9 = (8,8)**,
-  square 152; multi-config, 2026-06). The exact nimber value is open.
+- **n=18**: `G ≠ 0`, because the 18×18 game is a first-player win (witness opening
+  **I9 = (8,8)**, square 152, established by two independently configured proving runs). The exact
+  nimber value is open.
 
-**The conjecture on the OEIS page** (as transcribed in this project's handoffs; I could NOT
-re-fetch oeis.org this session — it 403s WebFetch on every format — so the *wording* is
-project-sourced, but the *terms* are independently repo-verified): for `n ≥ 10`,
+**The conjecture on the OEIS page**: for `n ≥ 10`,
 `G(n) = 0` if n even, `1` if n odd. The known terms confirm it through n=16; n=18 refutes its
 even half (`G(18) ≠ 0`).
 
-**Two things everyone should keep straight (recurring category errors in this project):**
-1. A344227 is the **nimber** sequence to n=13. This project's n=14..18 headline results are a
-   mix: n=14,15,16 are genuine **nimber** extensions; n=18 is a **win/loss OUTCOME** (nimber ≠ 0,
+**Two distinctions worth keeping straight, because they are easy to conflate:**
+1. A344227 is the **nimber** sequence, catalogued to n=13. The results here are a mix:
+   n=14,15,16,17 are genuine **nimber** extensions; n=18 is a **win/loss outcome** (nimber ≠ 0,
    value not computed). Only the nimber values extend A344227.
 2. Dekking–Shallit–Sloane "Queens in exile" (ELJC 2020) is a **different game** (single token
    on an *infinite* spiral/antidiagonal board, Wythoff-like), NOT Node-Kayles on the finite
@@ -89,7 +88,7 @@ four central lines" (odd n). `G` = Grundy value; `P` = `G=0`.
   P-position. This is a heuristic, not a theorem. Note also the even subsequence is **not**
   monotone-to-zero: even values are `G(0,2,4,6,8) = 0,1,1,1,3` then `G(10..16)=0` then
   `G(18)≠0` — a nonzero already occurred at n=8, so "eventually 0" is a fragile empirical
-  pattern that this project has now broken, not a law.
+  pattern, now broken, rather than a law.
 
 ### (c) Is G(n) bounded? (all known ≤ 3)
 
@@ -124,17 +123,16 @@ four central lines" (odd n). `G` = Grundy value; `P` = `G=0`.
 
 ## 2. Literature sweep
 
-Legend: **[V]** = verified this session against a primary/secondary source I read;
-**[V-sum]** = verified only via a search-engine summary (not the primary text);
-**[R]** = recalled / project-sourced, not independently re-verified this session.
+Legend: **[V]** = verified against a primary or secondary source that was read in full;
+**[V-sum]** = verified only through a search-engine summary, not the primary text;
+**[R]** = recalled, not independently verified.
 
 ### 2.1 The sequence and its game
 
 - **A344227 itself** — Sprague-Grundy values of Node-Kayles on the n-queens graph, terms
   `0,1,1,2,1,3,1,2,3,1,0,1,0,1` (n=0..13). **[V]** terms cross-checked against the
   `InnovativeInventor/node-kayles` repo (which computes exactly this and marks n=10..13 novel).
-  Author attribution Max Fan / M. Bardoe (2021) is **[R]** (project note; oeis.org unreachable
-  this session — 403 on WebFetch for the page, the `fmt=text` view, and the b-file).
+  Author attribution Max Fan / M. Bardoe (2021) is **[R]**.
 - **The non-attacking queens *game*** (place non-attacking queens, last to move wins = Node-
   Kayles on the queen graph). First proposed/studied by **Noon & Van Brummelen (2006)**; a paper
   literally titled "The Non-Attacking Queens Game" exists (ResearchGate 269909193). **[V-sum]**
@@ -156,8 +154,7 @@ Legend: **[V]** = verified this session against a primary/secondary source I rea
 - **Grundy values unbounded**: Node-Kayles Grundy values are **unbounded over general graphs**
   (established via explicit constructions in the Arc-Kayles / vertex-deletion-game literature,
   e.g. the "A generalization of Arc-Kayles" line, Int. J. Game Theory 2018, arXiv:1709.05219).
-  **[V-sum]** (multiple search summaries agree; I could not extract the theorem from the PDF —
-  it fetched as unreadable binary). **Consequence for §1c**: any boundedness on the queen family
+  **[V-sum]** (multiple search summaries agree; the theorem was not read in the primary text). **Consequence for §1c**: any boundedness on the queen family
   is NOT inherited from Node-Kayles in general — it must be a special property of queen graphs.
 - **Eventual periodicity on structured families**: "Node-Kayles on Trees" (Songsuwan et al.,
   arXiv:2512.24221, 2025) proves the Grundy sequences of n-regular trees and two-tree-plus-path
@@ -182,8 +179,9 @@ Legend: **[V]** = verified this session against a primary/secondary source I rea
 ### 2.3 What the literature does NOT give us
 
 No published theory predicts A344227's values, its parity pattern, or a bound. The even→0/odd→1
-pattern is a *conjecture attached to the OEIS entry*, not a theorem anywhere — and this project's own `G(17) = 2` refutes its odd half. So the project's
-n=14..18 results are genuinely at the frontier, and the theory in §3 is, to my knowledge, new.
+pattern is a *conjecture attached to the OEIS entry*, not a theorem anywhere, and `G(17) = 2`
+refutes its odd half. The n=14..18 results are therefore at the frontier of what is known, and the
+theory in §3 appears to be new.
 
 ---
 
@@ -332,18 +330,19 @@ n=18-scale search). Key facts about the search economics:
   `k=2` WIN tells you nothing you didn't need `k=1` for, and you'd have burned a multi-day search
   on the less-likely branch. Ordering by descending prior is the whole game when each test costs
   days.
-- **Load-bearing engine note** (from the nimber handoff): the `h=0` TT-skip band and `bk=20`
-  boolean leaf are what make an n=18-scale round converge on this box; the un-skipped n=18 solve
+- **Engine note**: the `h=0` TT-skip band and the `bk=20` boolean leaf are what make an
+  n=18-scale round converge on this hardware; the un-skipped n=18 solve
   thrashed. Any k≥1 round must keep those on. No checkpoint/resume exists for the sum engine — a
   multi-day round dies unrecoverably, which *raises* the value of firing the right k first.
 
-**Bottom line**: a confident `G(18)=1` prior is worth ~2 days of box time (one search vs two).
+**Bottom line**: a confident `G(18)=1` prior is worth about two days of machine time (one search
+rather than two).
 The theory (§3.5: single central-diagonal threat ≈ `*`) and the all-values-≤3 history both point
 to 1, so `k=1` first is the recommendation.
 
 ---
 
-## 5. Cheap deferred experiments (DO NOT RUN — for a later session with the box free)
+## 5. Experiments that would discriminate the remaining hypotheses
 
 All use the existing `queens nimber` engine, mostly on **small boards** or **one ply down**, and
 each is chosen to discriminate a specific hypothesis. Ranked by information-per-cost.

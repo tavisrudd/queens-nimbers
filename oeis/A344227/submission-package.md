@@ -1,4 +1,4 @@
-# OEIS A344227 extension — ready-to-paste submission package (2026-07-03; updated 2026-07-07)
+# OEIS A344227 extension: the submission package
 
 **Purpose**: extend OEIS **A344227** (Sprague-Grundy / nimber values of the Non-Attacking
 Queens game = Node-Kayles on the queen graph), catalogued only through n = 13, with the new
@@ -14,14 +14,14 @@ chain are in [../../verification/RESULTS.md](../../verification/RESULTS.md) and
 n = 18 outcome and Jenrich citation phrasing from
 [../../docs/queens-n18-paper.md](../../docs/queens-n18-paper.md) §Abstract/§1.
 
-**Status of this note**: DRAFT package for the user to review and submit. The A344227 entry was
-rechecked live on 2026-08-11 and still lists only n = 0..13 at revision #54 (dated May 27 2025),
-with keyword `more` and no `%E` extension lines — the extension is unclaimed. Recheck again at
-submission time. Items that require a public code/preprint artifact are called out in Section 13.
+**Status**: prepared, not yet submitted. The A344227 entry was rechecked on 2026-08-11 and still
+lists only n = 0..13 at revision #54 (dated May 27 2025), with keyword `more` and no `%E`
+extension lines, so the extension is unclaimed. Recheck at submission time; Section 13 lists what
+remains open.
 
 ---
 
-## 1. Current A344227 entry (fetched live 2026-07-03, rechecked 2026-07-07)
+## 1. The current A344227 entry (fetched 2026-07-03, rechecked 2026-08-11)
 
 Fetched via `curl -sL -A "Mozilla/5.0" "https://oeis.org/search?q=id:A344227&fmt=text"`
 (the plain `oeis.org/A344227` page 403s WebFetch; the search endpoint returned the record).
@@ -63,11 +63,11 @@ Key fixed fields the extension must respect:
 
 ---
 
-## 2. Consistency check — our terms vs the existing entry
+## 2. Consistency check against the existing entry
 
 The existing 14 terms (indices 0..13) and their mapping to board size n:
 
-| n  | a(n) existing | our engine (n <= 13) | match |
+| n  | a(n) existing | this engine (n <= 13) | match |
 |----|---------------|----------------------|-------|
 | 0  | 0             | 0                    | yes   |
 | 1  | 1             | 1                    | yes   |
@@ -84,7 +84,7 @@ The existing 14 terms (indices 0..13) and their mapping to board size n:
 | 12 | 0             | 0                    | yes   |
 | 13 | 1             | 1                    | yes   |
 
-Our engine reproduces every catalogued term. Basis (the full chain is in ../../verification/README.md):
+This engine reproduces every catalogued term. Basis (the full chain is in ../../verification/README.md):
 
 - the engine's whole-DAG mex reference matches the independent full-mex `Nimber` for n <= 8;
 - the CLI `queens nimber n` matches A344227 exactly for n = 1..13 (unit test
@@ -216,41 +216,35 @@ n = 18 comment's context:
 %H A344227 Thomas Jenrich, <a href="https://arxiv.org/abs/1312.5135">Successful strategies for a queens placing game on an n x n chess board</a>, arXiv:1312.5135 [math.CO], 2013.
 ```
 
-- Title/author/date **VERIFIED** against arxiv.org this session: "Successful strategies for a
-  queens placing game on an n x n chess board", Thomas Jenrich, submitted 2013-12-18 (v-online
-  2014-04-21). The paper draft now uses this verified title.
+- Title, author, and date verified against arXiv: "Successful strategies for a queens placing game
+  on an n x n chess board", Thomas Jenrich, submitted 2013-12-18 (online 2014-04-21). The
+  technical report uses this title.
 - Jenrich's abstract confirms the win/loss outcomes our nimber signs agree with: first-player wins
   for n = 4, 6, 8 and odd n; second-player wins for n = 10, 12, 14, 16 (so a(10)=a(12)=a(14)=a(16)=0
   as P-positions). Jenrich reports outcomes, not nimbers, so this is corroboration/context, not a
   source for the nimber values themselves.
 
-### 7.2 Our program / preprint — BLOCKED on a public artifact
+### 7.2 The computing program
 
-**Problem**: `git remote -v` in this repo returns nothing — the queens solver / heap-sum nimber
-engine is **not** published at any public URL. OEIS LINKS entries must point at a publicly
-reachable artifact (the existing Rust/Python links are public GitHub repos). We therefore have
-**no valid `%H` for our computation yet**. Options, in order of preference:
+The engine that produced the new terms is public, so it can be linked exactly the way Max Fan's
+calculator already is:
 
-1. **Public code mirror (best analog to the existing entry).** Push a read-only mirror of the
-   queens crate (or at least the nimber engine + dense-table builder + tests) to a public GitHub
-   repo, then link it exactly as Max Fan's calculator is linked:
-   ```
-   %H A344227 Tavis Rudd, <a href="https://github.com/OWNER/REPO">Heap-sum Sprague-Grundy engine for the Non-Attacking Queens game (computes A344227)</a>.
-   ```
-   This is the strongest verifiability answer for reviewers (they can run it). **ASSUMED: no such
-   repo exists yet — must be created and made public before this line is valid.**
-2. **arXiv preprint (in preparation).** The technical report [../../docs/queens-n18-paper.md] is a
-   draft; once posted to arXiv, link it:
-   ```
-   %H A344227 Tavis Rudd, <a href="https://arxiv.org/abs/XXXX.XXXXX">Solving the Non-Attacking Queens game for n = 18 [title TBD]</a>, arXiv preprint, 2026.
-   ```
-   **ASSUMED: not yet posted; the arXiv id is a placeholder.**
-3. **Submit terms without a new `%H` now, add the link in a follow-up edit.** OEIS accepts term
-   extensions credited via `%E` without a fresh program link, provided the terms are plausible and
-   the method is described in `%C`. This is viable for the **priority stamp** (per the deep-dive
-   §3.1: "OEIS now, do not wait for the paper"). The cost: the n = 18 comment (§5 (ii)) is weaker
-   without a citable source and may draw a reviewer request; consider holding (ii) for the
-   follow-up edit that adds the artifact link.
+```
+%H A344227 Tavis Rudd, <a href="https://github.com/tavisrudd/queens-nimbers">Heap-sum Sprague-Grundy engine for the Non-Attacking Queens game (computes A344227)</a>.
+```
+
+This is the strongest verifiability answer for a reviewer, who can build and rerun it: `a(14)`,
+`a(15)`, and `a(16)` reproduce in seconds to a few minutes, and `a(13)` reproduces the catalogued
+range.
+
+A preprint of the technical report is a second, later link. When one is posted, add:
+
+```
+%H A344227 Tavis Rudd, <a href="https://arxiv.org/abs/XXXX.XXXXX">Solving the Non-Attacking Queens game for n = 18</a>, arXiv preprint, 2026.
+```
+
+The arXiv identifier above is a placeholder; the terms do not depend on it. OEIS accepts a term
+extension credited via `%E` without a preprint, provided the method is described in `%C`.
 
 ### 7.3 Program field (`%o`) — optional method stub
 
@@ -269,7 +263,7 @@ at nothing invites the same "where is it" review request as a missing `%H`.
 
 ## 8. G(17) provenance
 
-`queens nimber 17` on the `queens-n18` worktree reported:
+`queens nimber 17` reported:
 
 | round | verdict |
 |-------|---------|
@@ -277,13 +271,13 @@ at nothing invites the same "where is it" review request as a missing `%H`.
 | k = 1 | WIN     |
 | k = 2 | LOSS    |
 
-The first LOSS is at `k = 2`, so **a(17) = G(17) = 2**. The initial run used branch
-`queens-n18`, `QUEENS_TT_BITS=31`, `bk=20/gk=16`, and took about 585 B cumulative nodes / 59 h.
-The value was verified on 2026-07-07; the release capsule still needs the exact verification
-log/config pointer recorded in ../../verification/RESULTS.md before public artifact packaging.
+The first LOSS is at `k = 2`, so **a(17) = G(17) = 2**. The run used `QUEENS_TT_BITS=31` (a 17 GB
+table) with `bk=20` and `gk=16`, and took about 585 × 10⁹ cumulative nodes over about 59 hours.
+The value was revalidated on 2026-07-07; the configuration is recorded in
+../../verification/RESULTS.md.
 
-This result breaks the odd-side `a(n)=1` prediction and makes the old "with G(17)" swap-in variant
-obsolete: the DATA line, b-file, and `%E` credit in Sections 3, 4, and 6 already include `a(17)=2`.
+This result breaks the odd-side `a(n)=1` prediction. The DATA line, b-file, and `%E` credit in
+Sections 3, 4, and 6 all include `a(17)=2`.
 
 ---
 
@@ -294,7 +288,7 @@ A002186` stands (A000170 = counts of n-queens solutions; the A316xxx block = rel
 / game-value sequences). Optional future additions, only if/when those sequences exist:
 
 - a **torus-queens nimber** sequence (the vertex-transitive companion; `G(torus_n)` computed to
-  n = 10 in this repo, a candidate new OEIS entry per the deep-dive T2). If submitted, cross-ref
+  n = 10 in this repository, a candidate new OEIS entry). If submitted, cross-reference
   it here and vice versa. **Not yet in OEIS — do not add a dangling Cf.**
 - an OEIS entry for the **win/loss outcome** of the queens game (first/second player), if one
   exists — a search did not surface one; do not invent an A-number.
@@ -318,16 +312,15 @@ Paste-ready summary of every edit against revision #54. Lines marked `+` are add
   %Y  unchanged
 ```
 
-The **minimum viable priority-stamp submission** (per deep-dive §3.1, "OEIS now, don't wait for
-the paper") is: the DATA extension + b-file + `%E` credit + method comment 5(i) + the Jenrich
-`%H`. The n = 18 comment 5(ii) and the Rudd `%H` are the parts that need a public artifact and can
-follow in a second edit.
+The **smallest submission that claims the terms** is the DATA extension, the b-file, the `%E`
+credit, method comment 5(i), and the Jenrich `%H`. The n = 18 comment 5(ii) and the program `%H`
+can travel with it or follow in a second edit.
 
 ---
 
-## 11. Submitter checklist (for the human)
+## 11. Submission steps
 
-Step-by-step for a first-time or returning OEIS contributor:
+Step by step, for a first-time or returning OEIS contributor:
 
 1. **Account**: sign in at https://oeis.org (register if needed; new accounts may need approval
    before edits are accepted — do this a few days ahead if the account is new).
@@ -338,10 +331,9 @@ Step-by-step for a first-time or returning OEIS contributor:
    `0,1,1,2,1,3,1,2,3,1,0,1,0,1,0,1,0,2`. Leave the offset `0,4` alone.
 4. **b-file**: upload `b344227.txt` with the exact section 4 content (indices 0..17). OEIS
    validates it against the DATA line — they must agree on the overlap.
-5. **COMMENTS**: add the method comment 5(i). Add the n = 18 comment 5(ii) **only if** you are
-   also adding a citable source link this round (section 7.2); otherwise defer it.
-6. **LINKS**: add the Jenrich `%H` (7.1). Add your own program/preprint `%H` (7.2) **only if a
-   public URL exists** — otherwise leave it out and add it in a follow-up edit.
+5. **COMMENTS**: add the method comment 5(i) and the n = 18 comment 5(ii), which the program link
+   in 7.2 now supports.
+6. **LINKS**: add the Jenrich `%H` (7.1) and the program `%H` (7.2).
 7. **EXTENSIONS**: add `a(14)-a(17) from _Tavis Rudd_, <submission date>` (section 6). Match the
    date to the actual day you submit.
 8. **Keywords**: leave `nonn`; decide on `more` (it signals "more terms wanted" — reasonable to
@@ -358,10 +350,10 @@ Step-by-step for a first-time or returning OEIS contributor:
 
 | likely reviewer concern                        | our answer / what to have ready                                            |
 |------------------------------------------------|----------------------------------------------------------------------------|
-| **Verifiability of the terms** — "how computed, can anyone reproduce?" | The method comment 5(i) describes the heap-sum reduction; the strongest answer is a **public code link** (7.2 option 1). The existing Haskell `%o` is a naive mex and cannot reach n >= 14 in practice, so it does **not** independently confirm the new terms — say so if asked, and point at the engine. |
-| **Program availability** — OEIS prefers a runnable program for computed terms | Provide the public repo (7.2) or at minimum the method `%C` + a description precise enough to reimplement. Flag: no public repo exists yet — creating one materially strengthens the submission. |
+| **Verifiability of the terms** — "how computed, can anyone reproduce?" | The method comment 5(i) describes the heap-sum reduction, and the program link in 7.2 lets anyone rerun it. The existing Haskell `%o` is a naive mex and cannot reach n >= 14 in practice, so it does **not** independently confirm the new terms — say so if asked, and point at the engine. |
+| **Program availability** — OEIS prefers a runnable program for computed terms | The public repository in 7.2 is the program: `queens nimber <n>` reproduces `a(13)` through `a(16)` from a clean build in minutes, and `cargo test --release` runs the differential gates. |
 | **Independent cross-check** of a(14..17)        | a(14), a(16) equal the production boolean win/loss verdicts (G=0 iff second wins); those outcomes match **Jenrich** (n=10,12,14,16 second-player) — cite the 7.1 link. a(15) reproduced under two leaf configs. a(17) was verified after the initial long heap-sum run. n<=13 reproduced exactly vs the catalogued values. |
-| **The n = 18 comment** — "unpublished claim"    | It asserts only a(18) != 0 (a win/loss fact), not a value. Still, expect a request for a citable source; pair it with a preprint/repo link or defer it to a follow-up edit. |
+| **The n = 18 comment** — "unpublished claim"    | It asserts only a(18) != 0 (a win/loss fact), not a value. Expect a request for a citable source; the repository link in 7.2 carries the run configurations and the technical report. |
 | **Offset / indexing correctness**               | Offset stays `0,4`; a(n) is the value on the n X n board; b-file index 0 = offset. Double-checked in section 1. |
 | **Keyword hygiene** (`more`, `nonn`)            | `nonn` holds (all terms >= 0). `more` stays until the sequence is closed. Do not add `hard`/`nice` unless an editor requests. |
 | **Author credit form**                          | Terms credited via `%E` to _Tavis Rudd_; the `%A` (original authors) is unchanged — do not overwrite it. |
@@ -370,17 +362,14 @@ Step-by-step for a first-time or returning OEIS contributor:
 
 ## 13. Remaining pre-submit checks
 
-1. **No public artifact for our computation** — `git remote -v` is empty; there is no public repo
-   or arXiv preprint yet. The Rudd `%H` (7.2) and the n = 18 source-backed comment (5(ii)) are
-   blocked on creating one (public GitHub mirror or arXiv post). The terms + b-file + `%E` +
-   method comment can go in without it (priority stamp), with the link added in a follow-up edit.
-2. **G(17) verification pointer** — the value is locked as `a(17)=2`, but the release capsule still
-   needs the exact 2026-07-07 verification log/config pointer recorded in ../../verification/RESULTS.md.
+1. **Preprint link** — the program `%H` (7.2) is available; an arXiv identifier for the technical
+   report is not, and its placeholder must not be pasted. Add that link in a follow-up edit.
+2. **G(17) run record** — the value is `a(17)=2`; the run configuration is in
+   ../../verification/RESULTS.md, and the raw log of that run is not part of this package.
 3. **Entry revision may have advanced** — snapshot is #54 (May 27 2025). Re-check at submission
    time and re-diff if it changed.
 4. **Submission date** — dates in `%E`, `%C` signatures, and the b-file header are paste-time
    placeholders; set them consistently to the actual submission date.
-5. **Jenrich title** — VERIFIED this session ("Successful strategies for a queens placing game on
-   an n x n chess board"); use that string.
-6. **`%o` program stub (7.3)** — only include if a real code link accompanies it; a pointer to a
-   non-public artifact draws the same review request as a missing link.
+5. **Jenrich title** — verified against the published article ("Successful strategies for a queens
+   placing game on an n x n chess board"); use that string.
+6. **`%o` program stub (7.3)** — include it alongside the program link in 7.2, not on its own.

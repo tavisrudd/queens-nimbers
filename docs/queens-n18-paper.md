@@ -314,7 +314,7 @@ Section 4.8.
 ### 4.1 The solver lineage
 
 The n = 16 search wall-clock evolved through a sequence of solvers, each a named, reproducible
-configuration (best clean-box search wall; node counts carry parallel noise except where the
+configuration (best clean-machine search wall; node counts carry parallel noise except where the
 n = 14 deterministic figure is cited):
 
 | solver                                      | n=16 wall | nodes  | mechanism                                                   |
@@ -329,7 +329,7 @@ n = 14 deterministic figure is cited):
 | `iso-dense` W17 + killers + micro-ops (now) | 13.43s    | 0.18 B | cross-root killer replies + kernel micro-ops (Section 4.5)  |
 
 For reference, the first complete n = 16 solve (a D₄-parallel search, no dense evaluator)
-visited **10,017,867,872** nodes in ≈56 min on a thermally throttled box (≈42 min clean) — so
+visited **10,017,867,872** nodes in ≈56 min on a thermally throttled machine (≈42 min clean) — so
 the current default (13.43 s, ≈1.79 × 10⁸ nodes; fastest single 12.43 s) represents roughly a
 55× reduction in node evaluations and a ~250× reduction in wall time on the same hardware, with
 the verdict (second-player win) unchanged throughout.
@@ -417,7 +417,7 @@ node reduction, a fact that recurs as the reason several throughput ideas failed
   `vpcompressb` (AVX-512-VBMI2) replacement for the ~9 %-of-cycles serial square-scatter
   (`verts_of`, −4.3 %); a one-ahead `getK` mask prefetch with a `TABLE_OFF` mask index (−2.1 %);
   and carrying the root adjacency into `getK` to skip a re-extraction (−2.5 %). Together with the
-  killers these took the clean-box n = 16 record from ≈23.4 s to **13.43 s** (fastest single
+  killers these took the clean-machine n = 16 record from ≈23.4 s to **13.43 s** (fastest single
   12.43 s) — a further reminder, on a search a prior audit had called "near-floor," that a
   measured limit is a hypothesis, not a bound.
 
@@ -452,7 +452,7 @@ a disabled flag with its measurement recorded.
   cycles/node / +5.7 % wall: the `pc = 17` subtree is shallow, so a memoised recurse beats a
   memo-less recompute (the opposite of the deep layers).
 - **Set-associative TT, L0 probe-cache dedup, software-prefetch helpers, PGO, isolated-vertex
-  pair-strip.** Each measured wash-to-negative on this single-box, memory-latency-bound workload
+  pair-strip.** Each measured wash-to-negative on this single-machine, memory-latency-bound workload
   (e.g. the entry probe is serial, so there is no memory-level parallelism for prefetch helpers
   to exploit). Several are parked for the *oversubscribed* small-table / large-n regime.
 
@@ -473,16 +473,16 @@ within seconds. Two memory mechanics matter:
 
 ### 4.8 Benchmarking methodology
 
-- **Interleaved A/B only.** The box thermally throttles within ~1 s of a ~12 s solve, so
+- **Interleaved A/B only.** The machine thermally throttles within ~1 s of a ~12 s solve, so
   all-A-then-all-B comparisons fabricate deltas; we alternate the two binaries round-by-round.
   The n = 14 proxy can lie about direction (the wave pipeline above), so the **interleaved n = 16
   A/B** is the trustworthy measure, with deterministic n = 14 node counts for noise-free
   node-direction.
 - **Metric discipline.** Cycles/node for byte-identical changes (node-count-independent); total
   cycles and wall for node-count-changing levers (where cycles/node rises by design).
-- **Box hygiene.** Before any benchmark: compressed-RAM swap off (this box's "swap" is `zram`, a
+- **Machine hygiene.** Before any benchmark: compressed-RAM swap off (this machine's "swap" is `zram`, a
   per-access decompress CPU cost, not disk), the filesystem cache cap lowered, page cache dropped
-  and memory compacted, and the RAM-backed `/tmp` cleared — a degraded box once produced a
+  and memory compacted, and the RAM-backed `/tmp` cleared — a degraded machine once produced a
   spurious "floor" that clean hardware halved.
 
 We treat any apparent performance limit as a measurement artefact or an untried lever until
@@ -509,7 +509,7 @@ The configuration that converged combines two ideas from Section 4:
    be reused. This frees the table to hold the lower, genuinely-reused bands.
 
 2. **A 17 GB flat table** (`QUEENS_TT_SLOTS = 2.125 × 10⁹` 8-byte slots; ≈16.7 GB resident),
-   sized to the box.
+   sized to the machine.
 
 With this configuration the giant root I9 converged at ~10 M nodes/s. The runs are not
 resumable (the flat table is not checkpointed); each proving run completed in a single ~7–8 hour
@@ -651,7 +651,7 @@ contradicting the even → 0 half.
 The exact value of **G(18)** remains open. Since the production outcome already proves
 `G(18) ≠ 0`, the exact-nimber plan can skip the `k = 0` reproof and fire `k = 1` first; a LOSS at
 any `k ≥ 1` pins the value, while a WIN excludes that one value. The `h = 0` table-skip band and
-the wide boolean leaf are what make such a round plausible on this box.
+the wide boolean leaf are what make such a round plausible on this machine.
 
 ### 6.3 Validating the nimber engine
 
@@ -1107,7 +1107,7 @@ We state the residual trusted base precisely.
    (Section 7.3).
 3. **Benchmark numbers are single-machine and noisy.** All n = 16 wall/node figures carry ≈ ±18 %
    parallel node-count noise; deterministic n = 14 node counts are the noise-free measure.
-   Throughput figures depend on a clean, huge-paged, non-throttled box.
+   Throughput figures depend on a clean, huge-paged, non-throttled machine.
 4. **The fingerprint table admits probabilistic wrong hits** at ≈ 2⁻⁵⁵ per colliding probe;
    cross-checks against Jenrich's verdicts and the two-run agreement bound the practical risk.
 
@@ -1231,12 +1231,12 @@ standard axiom triple.
     2020 (paths, lattices, prisms, hypercubes, generalized Petersen families); N. Songsuwan.
     *Node-Kayles on Trees.* arXiv:2512.24221 (eventual periodicity on regular-tree families).
     Context for Sections 2.2 and 6.5's periodicity/boundedness discussion.
-11. *Winning geometry across the even boards, and the n = 20 candidate map.* Project research
-    note, 2026-07-03 (`notes/2026-07-03-winning-geometry-n20.md`): winning-opening enumeration,
+11. *Winning geometry across the even boards, and the n = 20 candidate map.* Unpublished research
+    note by the author, 2026-07-03: winning-opening enumeration,
     root spectra, border ablations, the τ-scar trajectory, refutation margins, the n = 20 root
     rankings, and the quantified priors behind Section 9's registered prediction.
-12. *CGT laws and tricks: new theorem directions beyond the mirror theory.* Project research
-    note, 2026-07-03 (`notes/2026-07-03-cgt-laws-and-tricks.md`): full proofs of Theorem S1
+12. *Combinatorial-game laws and tricks: theorem directions beyond the mirror theory.*
+    Unpublished research note by the author, 2026-07-03: full proofs of Theorem S1
     (Closed-Pairing), the Well-Covered Parity Law, the True-Twin Deletion Lemma, the
     plane-in-torus embedding, and the round cap; the closed-pairing existence census; the torus
     computation to n = 10; and the correction record for the retracted "non-diagonal openings are
@@ -1262,5 +1262,5 @@ standard axiom triple.
     tablebases; not mechanised in a proof assistant).
 18. K. Takizawa. *Semi-strongly solved: certificate-exporting game solving* (6×6 Othello, 7×6
     Connect Four). arXiv:2411.01029, rev. 2026; I. Shaik et al., QBF strategy validation,
-    SAT 2023. Third-party-checkable certificates without formal verification — the adjacent
-    lane for Section 9's certified-nimbers direction.
+    SAT 2023. Third-party-checkable certificates without formal verification — the adjacent line
+    of work for Section 9's certified-nimbers direction.

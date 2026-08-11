@@ -69,8 +69,9 @@ development does and does not certify, and the residual trusted base.
 ## Citing
 
 The n = 18 solve and the nimber extension are described in
-[docs/queens-n18-paper.md](docs/queens-n18-paper.md). Until a preprint identifier exists, cite this
-repository by commit.
+[docs/queens-n18-paper.md](docs/queens-n18-paper.md). Releases are archived on Zenodo, which mints
+a version DOI for each one and a concept DOI for the software as a whole; cite the version DOI for
+a specific result, or the commit if you are citing unreleased work.
 
 ## License
 

@@ -161,7 +161,7 @@ const fn mode_rank(mode: u8) -> bool {
 /// *early* return). Stack-bounded (`[u64; 32]×2` per frame) so the recursive `wins_inc` is safe.
 const WAVE_CAP: usize = 32;
 
-/// `rdtsc` time-stamp counter read (`constant_tsc`/`nonstop_tsc` on this box, so it tracks
+/// `rdtsc` time-stamp counter read (`constant_tsc`/`nonstop_tsc` on this hardware, so it tracks
 /// wall cycles). Used only on the `M_PROF` measurement path to stratify TT get/put latency
 /// by popcount; never on the production hot path.
 #[inline(always)]
@@ -474,7 +474,7 @@ fn l0_put(route: u64, fp: u64, val: u8) {
     L0_CACHE.with(|c| c.borrow_mut()[idx] = e);
 }
 
-// ---- Raw-pointer L0 sidecar (QUEENS_SIDECAR) — the handoff's untried M_L0 angle -------------
+// ---- Raw-pointer L0 sidecar (QUEENS_SIDECAR) — the untried M_L0 angle ----------------------
 // Same direct-mapped 1 MB (L2-resident) cache, but accessed via a **raw pointer fetched once per
 // node** (no per-probe `.with`/`RefCell` borrow — the overhead the M_L0 build measured at +6%
 // cyc/node). The node's entry-get + its puts reuse the one pointer. Exact 55-bit fp tag ⇒ a hit is
@@ -521,7 +521,7 @@ unsafe fn raw_l0_put(base: *mut u64, route: u64, fp: u64, val: u8) {
 /// shared arena is its filtered child list (exactly what the recursion passes children as
 /// `pmoves`), resumed at index `mi`. No `result` field is needed: a winning child just resumes the
 /// parent's loop, a losing child wins the parent outright (handled by the unwind cascade).
-// hot-struct discipline (CLAUDE.md #4/#6): explicit layout, fields largest-align-descending (the
+// hot-struct discipline: explicit layout, fields largest-align-descending (the
 // align-8 `Bits`/`u64` block, then the `u32`s, then the lone `u8` last — so `repr(C)` introduces no
 // interior padding and the frame stays the same 328 B the default repr packed it to).
 #[derive(Clone, Copy)]
@@ -597,7 +597,7 @@ thread_local! {
 /// Plain `[u8; 8]` data, one cache line, passed by `&` — the per-node board ops
 /// (`and_not`/`popcount`/`each` over four `u64`s) and the per-child attack-row loads of
 /// the old tail collapse to single-byte ops on `alive`.
-#[repr(C)] // hot-struct discipline (CLAUDE.md #4/#5): explicit layout, two-per-line `[u8;8]` pair.
+#[repr(C)] // hot-struct discipline: explicit layout, two-per-line `[u8;8]` pair.
 struct TinyGraph {
     adj: [u8; MAXV_TINY],
     closed: [u8; MAXV_TINY],
@@ -662,7 +662,7 @@ static IDENT_BYTES: IdentBytes = {
 ///
 /// AVX512-VBMI2 `vpcompressb` per word (compress the identity byte vector by the word's bit
 /// mask) replaces the serial `tzcnt`/`x &= x-1` scan — that loop's ~2-cycle-per-set-bit
-/// dependent chain measured ~9% of n=16 search cycles (srcline profile, 2026-07-02).
+/// dependent chain measured ~9% of n=16 search cycles (srcline profile).
 /// `vpcompressb` preserves ascending bit order, so the output stays byte-identical.
 #[inline(always)]
 fn verts_of(avail: Bits, verts: &mut [u8]) {
@@ -1040,7 +1040,7 @@ pub struct IsoFlat {
     /// route each band probe into a cache-line set-associative bucket (8-way). Orthogonal to the
     /// search-strategy `MODE`; resolved once at construction, read by the TT-helper layout branch.
     assoc: bool,
-    /// `QUEENS_SIDECAR=1`: the raw-pointer once-per-node L0 sidecar (the handoff's untried M_L0
+    /// `QUEENS_SIDECAR=1`: the raw-pointer once-per-node L0 sidecar (the untried M_L0
     /// angle). The node's entry probe checks a per-worker 1 MB direct-mapped exact cache (raw ptr
     /// fetched once, no per-probe `.with`) before the TT; populated on the node's put. Off ⇒ the
     /// base-pointer fetch and the branch short-circuit.
@@ -1073,7 +1073,7 @@ pub struct IsoFlat {
     /// it avoids a full re-expansion). That reuse and the "wasted" cut-probe are the SAME probe, so no
     /// pc-gate can keep the protection while dropping the waste. Kept gated-off as substrate (default
     /// 0 ⇒ `node_pc >= 0` always true ⇒ byte-identical). The one untried angle: at a much larger TT
-    /// (≥17 GB, less eviction ⇒ smaller +nodes) the −1.3% cyc/node might net out — but the box is
+    /// (≥17 GB, less eviction ⇒ smaller +nodes) the −1.3% cyc/node might net out — but the machine is
     /// memory-tight for back-to-back 17 GB A/Bs, and the ceiling is small regardless.
     etc_pc_gate: u32,
     /// Shared per-popcount flat-TT put histogram (one [`AtomicU64`] per popcount), merged
@@ -1393,7 +1393,7 @@ impl IsoFlat {
         // code-build the deep getK layers are cheap enough that raising the ceiling pays the whole
         // way up — n=16 node count is TT-independent (the cut is inherent, not eviction-driven) and
         // wall drops monotonically K=12→16 (16 GB single-run: 49.5s→34.4s = −30.6%). `QUEENS_DENSE_K`
-        // ★ DEFAULT K=17 (--18): the W17 dense layer (136-bit 3-word labelled code, above the u128
+        // DEFAULT K=17: the W17 dense layer (136-bit 3-word labelled code, above the u128
         // K=16 ceiling) resolves pc==17 nodes (~21% of the n=16 node set, M_HITKEY-measured) directly
         // as getK leaves instead of cold recurse-spine entry probes (pc==17 is 99.8% COLD). With the
         // degree-ordered getK sweep (`DenseW8::ord_getk`, default-on) this is **−13% wall** vs the old
@@ -1427,7 +1427,7 @@ impl IsoFlat {
             // 3..24 MiB) at startup, off the hot getK path.
             warm_wide(s.dense_k as usize);
         }
-        // Warm-restart OFF by default for iso-dense (--15): the warm_secs(=2) parallel warm pass +
+        // Warm-restart OFF by default for iso-dense: the warm_secs(=2) parallel warm pass +
         // staggered restart trims the node count a touch but its ramp costs more wall than it saves
         // now that the counting sort sped the kernel — a 4-round n=16 A/B (12 GB) measured restart-ON
         // at +3.2% wall / −1.5% nodes vs OFF (roots hitting all cores immediately wins). The balance
@@ -1451,13 +1451,13 @@ impl IsoFlat {
         // Verdict-preserving (changes the node count *by design* — an earlier cutoff of the same
         // value — so it is **not** part of the exact `--distinct` gate). iso-flat/iso-window keep it
         // off (their `from_tt_with_window` defaults are unchanged ⇒ control + `--distinct` intact).
-        // ★ DEFAULT-ON (--7, promoted): skip all TT work for pc==18 nodes (all roots, {18}) — the band
+        // DEFAULT-ON: skip all TT work for pc==18 nodes (all roots, {18}) — the band
         // is ~100% cold and its children are all getK leaves ⇒ cascade-free; −3.6% total cyc / −2.5%
         // wall at n=16, verdict-preserving. Off via `QUEENS_SKIP18=0` (the A/B control) or the
         // whole-stack revert `QUEENS_FAST=0`. Empty `skip18_squares` ⇒ all roots (n-agnostic default).
         s.skip18 = !matches!(std::env::var("QUEENS_SKIP18").as_deref(), Ok("0"))
             && !matches!(std::env::var("QUEENS_FAST").as_deref(), Ok("0"));
-        // ★ DEFAULT-ON (2026-07-01, promoted): cross-root killer replies at the 2nd ply — each root
+        // DEFAULT-ON: cross-root killer replies at the 2nd ply — each root
         // publishes its refuting reply square; later roots jump to already-proven killers (the table
         // is re-read mid-loop, so late-published killers land). n=16 A/B: −37.6% nodes / −43.3% wall,
         // cyc/node flat; record 23.44s → 14.60s. Verdict-preserving (a pure reorder of the depth-1
@@ -1475,12 +1475,12 @@ impl IsoFlat {
                 },
             )
             .min(8);
-        // ★ DEFAULT-ON (2026-07-01, promoted with the killer): killer jumps at the deeper odd
+        // DEFAULT-ON: killer jumps at the deeper odd
         // plies (depth 3/5, per-band tables) stack another −7.5% nodes / −4.5% wall on the depth-1
         // win. `QUEENS_KILLER_DEEP=0` (or killer off / `QUEENS_FAST=0`) reverts.
         s.killer_deep = !matches!(std::env::var("QUEENS_KILLER_DEEP").as_deref(), Ok("0"))
             && !matches!(std::env::var("QUEENS_FAST").as_deref(), Ok("0"));
-        // ★ DEFAULT-ON (2026-07-01): the ETC pc-gate (batch-probe off below pc 29) re-tested
+        // DEFAULT-ON: the ETC pc-gate (batch-probe off below pc 29) re-tested
         // POSITIVE in the killer regime — the killer cut leaves the TT ~7.5% full, so the
         // eviction-protection value that originally killed the gate (--3: +2.0% nodes) is gone;
         // now cyc/node −1.2% (every pair), total cyc −1.8%. `QUEENS_ETC_GATE=0` or
@@ -6020,7 +6020,7 @@ impl Solver for IsoFlat {
             if do_warm && self.warm_stagger_ms > 0 && !warm_done[idx].load(Ordering::Relaxed) {
                 // Rank among the slow (phase-1-unfinished) roots, **capped** so the cumulative beat
                 // stays "a bit" (≤ 4 beats) — without the cap, a short warm leaves ~all roots slow
-                // and `rank × stagger` would idle the box for tens of seconds. Beat = `stagger_ms`.
+                // and `rank × stagger` would idle the machine for tens of seconds. Beat = `stagger_ms`.
                 let rank = warm_done[..idx]
                     .iter()
                     .filter(|d| !d.load(Ordering::Relaxed))

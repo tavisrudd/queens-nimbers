@@ -6,7 +6,7 @@ use super::WORDS;
 /// lexicographic order on the words -- a total order, all we need to pick a
 /// canonical representative and to key the memo table.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Debug)]
-#[repr(transparent)] // hot-struct discipline (CLAUDE.md #4): explicit layout = the inner `[u64; WORDS]`.
+#[repr(transparent)] // hot-struct discipline: explicit layout = the inner `[u64; WORDS]`.
 pub struct Bits(pub(crate) [u64; WORDS]);
 
 // #7: a size/align regression (e.g. WORDS bumped, or a field snuck in) fails the build.

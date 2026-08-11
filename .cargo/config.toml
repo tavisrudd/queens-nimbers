@@ -7,7 +7,7 @@
 # rustflags would be shadowed by the more-specific [target.*] one. Using the
 # target key here appends to it, so we get both mold and target-cpu.
 #
-# `native` is portable (it means "this host"); `make release` pins znver5
-# explicitly for reproducible bench numbers on the Zen 5 box.
+# `native` is portable (it means "this host"); a release build can pin `znver5`
+# explicitly for reproducible bench numbers on a Zen 5 workstation.
 [target.x86_64-unknown-linux-gnu]
 rustflags = ["-C", "target-cpu=native"]

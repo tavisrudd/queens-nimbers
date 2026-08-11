@@ -779,7 +779,7 @@ impl DenseW8 {
         collapse_huge(arena);
         DenseW8 {
             arena,
-            // ★ Default-ON (--18, promoted): the degree-ordered getK sweep is part of the FAST default.
+            // DEFAULT-ON: the degree-ordered getK sweep is part of the FAST default.
             // Disabled by `QUEENS_GETK_ORD=0` or the whole-stack revert `QUEENS_FAST=0` (the A/B control).
             // Only matters for iso-dense (dense_k≥12 reaches the ordered get12+ layers); iso-window/
             // iso-flat never call get12+ so they are byte-identical regardless.

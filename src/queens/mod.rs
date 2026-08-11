@@ -17,7 +17,7 @@
 //! take the centre, then answer every reply with its 180° rotation (see
 //! `Solver::first_player_wins`). Only *even* boards are searched.
 //!
-//! ## Solver lineage (mirrors the Othello engine ladder)
+//! ## Solver lineage
 //!
 //! [`Queens`] is pure geometry; the search is a ladder of [`Solver`]s, each step
 //! adding one idea, all computing the *same* win/loss so the simpler ones are
